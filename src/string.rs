@@ -456,8 +456,8 @@ impl<T: AsRef<str>> StringAssertions<T> for AssertThat<T> {
         let string = self.data.as_ref();
         let prefix = prefix.as_ref();
 
-        if string.starts_with(prefix) {
-            let highlighted = format!("[{}]{}", prefix, &string[prefix.len()..]);
+        if let Some(string_without_prefix) = string.strip_prefix(prefix) {
+            let highlighted = format!("[{}]{}", prefix, string_without_prefix);
 
             Failure::new(&self)
                 .expected_it(format!("not to start with <{}>", prefix.escape_debug()))
@@ -486,8 +486,8 @@ impl<T: AsRef<str>> StringAssertions<T> for AssertThat<T> {
         let string = self.data.as_ref();
         let suffix = suffix.as_ref();
 
-        if string.ends_with(suffix) {
-            let highlighted = format!("{}[{}]", &string[..(string.len() - suffix.len())], suffix);
+        if let Some(string_without_suffix) = string.strip_suffix(suffix) {
+            let highlighted = format!("{}[{}]", string_without_suffix, suffix);
 
             Failure::new(&self)
                 .expected_it(format!("not to end with <{}>", suffix.escape_debug()))

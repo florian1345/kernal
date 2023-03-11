@@ -47,15 +47,9 @@ pub trait PanicAssertions {
 }
 
 fn to_message(error: Box<dyn Any + Send>) -> Option<String> {
-    if let Some(s) = error.downcast_ref::<&'static str>() {
-        Some((*s).to_owned())
-    }
-    else if let Some(s) = error.downcast_ref::<String>() {
-        Some(s.clone())
-    }
-    else {
-        None
-    }
+    error.downcast_ref::<&'static str>()
+        .map(|s| (*s).to_owned())
+        .or_else(|| error.downcast_ref::<String>().cloned())
 }
 
 fn assert_panics_with_message_matching_predicate<R, F, S, P>(
@@ -79,7 +73,7 @@ where
 
 impl<R, F: FnOnce() -> R + UnwindSafe> PanicAssertions for AssertThat<F> {
     fn panics(self) {
-        if let Ok(_) = catch_unwind(self.data) {
+        if catch_unwind(self.data).is_ok() {
             Failure::from_expression(&self.expression)
                 .expected_it("to panic")
                 .but_it("did not panic")

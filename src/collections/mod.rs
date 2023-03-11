@@ -34,6 +34,12 @@ pub trait Collection<'collection> {
         Self: 'iter,
         'collection: 'iter;
 
+    /// Indicates whether this collection is empty, i.e. it has the length 0 according to
+    /// [Collection::len].
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Returns the number of elements in this collection. By default, this is implemented by
     /// counting the number of items in the iterator. It may be implemented in a more efficient way.
     fn len(&self) -> usize {
@@ -107,14 +113,14 @@ where
         'collection: 'iter;
 
     fn len(&self) -> usize {
-        (&**self).len()
+        (**self).len()
     }
 
     fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
     where
         'collection: 'reference
     {
-        (&**self).iterator()
+        (**self).iterator()
     }
 }
 
@@ -129,14 +135,14 @@ where
         'collection: 'iter;
 
     fn len(&self) -> usize {
-        (&**self).len()
+        (**self).len()
     }
 
     fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
     where
         'collection: 'reference
     {
-        (&**self).iterator()
+        (**self).iterator()
     }
 }
 
@@ -151,7 +157,7 @@ where
         'collection: 'iter;
 
     fn len(&self) -> usize {
-        (&**self).len()
+        (**self).len()
     }
 
     fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
@@ -390,7 +396,7 @@ where
     C::Item: Debug
 {
     fn is_empty(self) -> Self {
-        if self.data.len() != 0 {
+        if !self.data.is_empty() {
             Failure::new(&self)
                 .expected_it("to be empty")
                 .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
@@ -401,7 +407,7 @@ where
     }
 
     fn is_not_empty(self) -> Self {
-        if self.data.len() == 0 {
+        if self.data.is_empty() {
             Failure::new(&self).expected_it("not to be empty").but_it("was").fail();
         }
 

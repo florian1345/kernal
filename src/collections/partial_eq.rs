@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::ops::Range;
 
@@ -60,7 +61,7 @@ where
     C::Item: PartialEq,
     'collection: 'item,
 {
-    let expected_items: Vec<&C::Item> = borrow_all(&expected_items);
+    let expected_items: Vec<&C::Item> = borrow_all(expected_items);
     let mut missing_multiset = expected_items.iter().cloned().collect::<VecMultiset<_>>();
     let mut superfluous_multiset: VecMultiset<&C::Item> = VecMultiset::new();
 
@@ -312,7 +313,7 @@ where
 {
     let collection_prefix = collection.iterator().take(prefix.len()).collect::<Vec<_>>();
 
-    if &collection_prefix == prefix {
+    if collection_prefix == prefix {
         Some(vec![0..prefix.len()])
     }
     else {
@@ -332,7 +333,7 @@ where
     let collection_suffix_start = collection.len() - suffix.len();
     let collection_suffix = collection.iterator().skip(collection_suffix_start).collect::<Vec<_>>();
 
-    if &collection_suffix == suffix {
+    if collection_suffix == suffix {
         Some(vec![collection_suffix_start..collection.len()])
     }
     else {
@@ -479,14 +480,11 @@ where
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
         let collection_len = self.data.len();
-        let counter_example_section = if collection_len < expected_items.len() {
-            Some(collection_len..collection_len)
-        }
-        else if collection_len > expected_items.len() {
-            Some(expected_items.len()..collection_len)
-        }
-        else {
-            expected_items.iter()
+
+        let counter_example_section = match collection_len.cmp(&expected_items.len()) {
+            Ordering::Less => Some(collection_len..collection_len),
+            Ordering::Greater => Some(expected_items.len()..collection_len),
+            Ordering::Equal => expected_items.iter()
                 .zip(self.data.iterator())
                 .enumerate()
                 .find(|(_, (expected_item, collection_item))| *expected_item != collection_item)

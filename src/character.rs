@@ -227,32 +227,28 @@ impl CharacterAssertions for AssertThat<char> {
     fn is_prefix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().next() == Some(character),
+        assert_char_matches_predicate(self, |character| string.starts_with(character),
             format!("to be the first character of <{}>", string.escape_debug()))
     }
 
     fn is_not_prefix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().next() != Some(character),
+        assert_char_matches_predicate(self, |character| !string.starts_with(character),
             format!("not to be the first character of <{}>", string.escape_debug()))
     }
 
     fn is_suffix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().rev().next() == Some(character),
+        assert_char_matches_predicate(self, |character| string.ends_with(character),
             format!("to be the last character of <{}>", string.escape_debug()))
     }
 
     fn is_not_suffix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().rev().next() != Some(character),
+        assert_char_matches_predicate(self, |character| !string.ends_with(character),
             format!("not to be the last character of <{}>", string.escape_debug()))
     }
 

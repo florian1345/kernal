@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};
@@ -79,7 +80,7 @@ pub trait SignedAssertions {
 impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
 
     fn is_positive(self) -> Self {
-        if !(self.data > T::ZERO) {
+        if self.data.partial_cmp(&T::ZERO) != Some(Ordering::Greater) {
             Failure::new(&self).expected_it("to be positive").but_it_was_data(&self).fail();
         }
 
@@ -95,7 +96,7 @@ impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
     }
 
     fn is_negative(self) -> Self {
-        if !(self.data < T::ZERO) {
+        if self.data.partial_cmp(&T::ZERO) != Some(Ordering::Less) {
             Failure::new(&self).expected_it("to be negative").but_it_was_data(&self).fail();
         }
         

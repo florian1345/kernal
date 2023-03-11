@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};
@@ -108,7 +109,7 @@ where
         let offset = offset.borrow();
         let abs_diff = self.data.abs_diff(expected);
 
-        if !(&abs_diff <= offset) {
+        if matches!(abs_diff.partial_cmp(offset), None | Some(Ordering::Greater)) {
             Failure::new(&self)
                 .expected_it(format!("to be within <{:?}> of <{:?}>", offset, expected))
                 .but_it(format!("was <{:?}>, which is outside that range", &self.data))

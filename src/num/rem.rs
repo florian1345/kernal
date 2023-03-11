@@ -110,7 +110,7 @@ where
     T::Output: One + PartialEq + Zero
 {
     fn is_even(self) -> Self {
-        let mod_2 = self.data.clone().modulo(T::TWO.clone());
+        let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 != T::Output::ZERO {
             Failure::new(&self).expected_it("to be even").but_it_was_data(&self).fail();
@@ -120,7 +120,7 @@ where
     }
 
     fn is_not_even(self) -> Self {
-        let mod_2 = self.data.clone().modulo(T::TWO.clone());
+        let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 == T::Output::ZERO {
             Failure::new(&self).expected_it("not to be even").but_it_was_data(&self).fail();
@@ -130,7 +130,7 @@ where
     }
 
     fn is_odd(self) -> Self {
-        let mod_2 = self.data.clone().modulo(T::TWO.clone());
+        let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 != T::Output::ONE {
             Failure::new(&self).expected_it("to be odd").but_it_was_data(&self).fail();
@@ -140,7 +140,7 @@ where
     }
 
     fn is_not_odd(self) -> Self {
-        let mod_2 = self.data.clone().modulo(T::TWO.clone());
+        let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 == T::Output::ONE {
             Failure::new(&self).expected_it("not to be odd").but_it_was_data(&self).fail();
@@ -163,7 +163,7 @@ where
     T::Output: PartialEq + Zero
 {
     fn is_an_integer(self) -> Self {
-        let mod_1 = self.data.clone().modulo(T::ONE.clone());
+        let mod_1 = self.data.clone().modulo(T::ONE);
 
         if mod_1 != T::Output::ZERO {
             Failure::new(&self).expected_it("to be an integer").but_it_was_data(&self).fail();
@@ -173,7 +173,7 @@ where
     }
 
     fn is_no_integer(self) -> Self {
-        let mod_1 = self.data.clone().modulo(T::ONE.clone());
+        let mod_1 = self.data.clone().modulo(T::ONE);
 
         if mod_1 == T::Output::ZERO {
             Failure::new(&self)

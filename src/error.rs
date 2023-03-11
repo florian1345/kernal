@@ -48,7 +48,7 @@ impl<T: Error> ErrorAssertions for AssertThat<T> {
         let message = self.data.to_string();
         let expected_message = expected_message.borrow();
 
-        if &message != expected_message {
+        if message != expected_message {
             Failure::new(&self)
                 .expected_it(format!("to have the error message <{}>",
                     expected_message.escape_debug()))
