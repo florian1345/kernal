@@ -354,14 +354,18 @@ fn assert_length_predicate<'collection, C, F>(assert_that: AssertThat<C>, length
 where
     C: Collection<'collection>,
     C::Item: Debug,
-    F: Fn(usize, usize) -> bool
+    F: Fn(usize) -> bool
 {
     let len = assert_that.data.len();
 
-    if !length_predicate(len, reference_len) {
+    if !length_predicate(len) {
+        let collection_debug = CollectionDebug {
+            collection: &assert_that.data
+        };
+
         Failure::new(&assert_that)
             .expected_it(format!("{} <{}>", expected_it_prefix, reference_len))
-            .but_it(format!("was <{:?}> with length <{}>", CollectionDebug { collection: &assert_that.data }, len))
+            .but_it(format!("was <{:?}> with length <{}>", collection_debug, len))
             .fail();
     }
 
@@ -415,32 +419,32 @@ where
     }
 
     fn has_length(self, expected_length: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len == reference_len,
+        assert_length_predicate(self, |len| len == expected_length,
             expected_length, "to have length")
     }
 
     fn has_length_less_than(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len < reference_len,
+        assert_length_predicate(self, |len| len < length_bound,
             length_bound, "to have length less than")
     }
 
     fn has_length_less_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len <= reference_len,
+        assert_length_predicate(self, |len| len <= length_bound,
             length_bound, "to have length less than or equal to")
     }
 
     fn has_length_greater_than(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len > reference_len,
+        assert_length_predicate(self, |len| len > length_bound,
             length_bound, "to have length greater than")
     }
 
     fn has_length_greater_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len >= reference_len,
+        assert_length_predicate(self, |len| len >= length_bound,
             length_bound, "to have length greater than or equal to")
     }
 
     fn does_not_have_length(self, unexpected_length: usize) -> Self {
-        assert_length_predicate(self, |len, reference_len| len != reference_len,
+        assert_length_predicate(self, |len| len != unexpected_length,
             unexpected_length, "not to have length")
     }
 
