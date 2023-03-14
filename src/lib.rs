@@ -16,6 +16,7 @@ pub mod partial_eq;
 pub mod partial_ord;
 pub mod pointer;
 pub mod prelude;
+pub mod result;
 pub mod string;
 
 pub(crate) mod util;
