@@ -7,6 +7,7 @@ use crate::{AssertThat, Failure};
 use crate::collections::{assert_all_match_predicate, Collection, CollectionDebug, HighlightedCollectionDebug};
 use crate::collections::multiset::VecMultiset;
 use crate::collections::ordered::OrderedCollection;
+use crate::util::borrow_all;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Collection] trait where the [Collection::Item] type implements
@@ -48,10 +49,6 @@ where
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>;
-}
-
-fn borrow_all<T, B: Borrow<T>>(to_borrow: &[B]) -> Vec<&T> {
-    to_borrow.iter().map(|b| b.borrow()).collect()
 }
 
 fn compute_missing_and_superfluous<'collection, 'item, C>(collection: &'item C,

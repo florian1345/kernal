@@ -177,7 +177,7 @@ fn write_delimiter(f: &mut Formatter, index: usize) -> fmt::Result {
 }
 
 pub(crate) struct CollectionDebug<'wrapper, C> {
-    collection: &'wrapper C,
+    pub(crate) collection: &'wrapper C,
 }
 
 impl<'wrapper, 'collection, C> Debug for CollectionDebug<'wrapper, C>
@@ -200,8 +200,8 @@ where
 }
 
 pub(crate) struct HighlightedCollectionDebug<'wrapper, C> {
-    collection: &'wrapper C,
-    highlighted_sections: Vec<Range<usize>>,
+    pub(crate) collection: &'wrapper C,
+    pub(crate) highlighted_sections: Vec<Range<usize>>,
 }
 
 impl<'wrapper, C> HighlightedCollectionDebug<'wrapper, C> {

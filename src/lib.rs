@@ -8,18 +8,20 @@ pub mod character;
 pub mod collections;
 pub mod error;
 pub mod lock;
+pub mod maps;
 pub mod num;
 pub mod option;
 pub mod panic;
 pub mod partial_eq;
 pub mod partial_ord;
 pub mod pointer;
+pub mod prelude;
 pub mod string;
+
+pub(crate) mod util;
 
 #[cfg(test)]
 pub(crate) mod test_util;
-
-pub mod prelude;
 
 /// This struct holds the evaluated result of an expression for further assertions. It also contains
 /// metadata used for generating helpful error messages should an assertion fail.

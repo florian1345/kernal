@@ -17,6 +17,7 @@ pub use crate::collections::partial_ord::{
 };
 pub use crate::error::ErrorAssertions;
 pub use crate::lock::{LockAssertions, MutexAssertions, RwLockAssertions};
+pub use crate::maps::MapAssertions;
 pub use crate::num::float::FloatAssertions;
 pub use crate::num::rem::{RemAssertions, MaybeIntegerAssertions, EvennessAssertions};
 pub use crate::num::signed::{SignedAssertions, ZeroableAssertions};
