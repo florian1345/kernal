@@ -121,34 +121,67 @@ pub trait StringAssertions<T> {
     /// letter according to [char::is_lowercase].
     fn does_not_contain_lowercase_letters(self) -> Self;
 
+    /// Asserts that the tested string contains at least one character which is classified as a
+    /// control character according to [char::is_control].
     fn contains_control_characters(self) -> Self;
 
+    /// Asserts that the tested string contains no character which is classified as a control
+    /// character according to [char::is_control].
     fn does_not_contain_control_characters(self) -> Self;
 
     // TODO use Pattern as soon as it is stable (https://github.com/rust-lang/rust/issues/27721)
 
+    /// Asserts that the tested string contains the given `substring`, i.e. some slice of the tested
+    /// string is equal to the substring.
     fn contains<S: AsRef<str>>(self, substring: S) -> Self;
 
+    /// Asserts that the tested string does not contain the given `substring`, i.e. no slice of the
+    /// tested string is equal to the substring.
     fn does_not_contain<S: AsRef<str>>(self, substring: S) -> Self;
 
+    /// Asserts that the tested string contains a prefix that is equal to the given `prefix`, i.e.
+    /// the slice of the tested string that contains the first `prefix.len()` characters is equal to
+    /// `prefix`. If the tested string is shorter than the prefix, the assertion fails.
     fn starts_with<S: AsRef<str>>(self, prefix: S) -> Self;
 
+    /// Asserts that the tested string does not contain a prefix that is equal to the given
+    /// `prefix`, i.e. the slice of the tested string that contains the first `prefix.len()`
+    /// characters is different from `prefix`. If the tested string is shorter than the prefix, the
+    /// assertion passes trivially.
     fn does_not_start_with<S: AsRef<str>>(self, prefix: S) -> Self;
 
+    /// Asserts that the tested string contains a suffix that is equal to the given `suffix`, i.e.
+    /// the slice of the tested string that contains the last `suffix.len()` characters is equal to
+    /// `suffix`. If the tested string is shorter than the suffix, the assertion fails.
     fn ends_with<S: AsRef<str>>(self, suffix: S) -> Self;
 
+    /// Asserts that the tested string does not contain a suffix that is equal to the given
+    /// `suffix`, i.e. the slice of the tested string that contains the last `suffix.len()`
+    /// characters is different from suffix`. If the tested string is shorter than the suffix, the
+    /// assertion fails trivially.
     fn does_not_end_with<S: AsRef<str>>(self, suffix: S) -> Self;
 
+    /// Asserts that the tested string is trimmed, i.e. does not start and does not end with
+    /// whitespace.
     fn is_trimmed(self) -> Self;
 
+    /// Asserts that the tested string is not trimmed, i.e. starts or ends with whitespace.
     fn is_not_trimmed(self) -> Self;
 
+    /// Asserts that the tested string is pure ASCII, i.e. contains no non-ASCII characters
+    /// according to [char::is_ascii].
     fn is_ascii(self) -> Self;
 
+    /// Asserts that the tested string is not pure ASCII, i.e. contains at least one non-ASCII
+    /// character according to [char::is_ascii].
     fn is_not_ascii(self) -> Self;
 
+    /// Converts the tested string to a [Vec] of the [char]s contained in it and allows assertions
+    /// on them.
     fn to_chars(self) -> AssertThat<Vec<char>>;
 
+    /// Converts the tested string to a [Vec] of the bytes ([u8]) contained in it and allows
+    /// assertions on them.
     fn to_bytes(self) -> AssertThat<Vec<u8>>;
 }
 
