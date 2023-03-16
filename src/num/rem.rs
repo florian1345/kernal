@@ -3,10 +3,24 @@ use std::fmt::Debug;
 use crate::{AssertThat, Failure};
 use crate::num::{One, Two, Zero};
 
-pub trait Modulo<Rhs = Self> {
+/// A trait that requires the modulo-operation, which is similar to [Rem](std::ops::Rem), but
+/// returns a non-negative result. The equivalence class of a negative number is determined by how
+/// much larger the number is compared to the next lower (or equal) number that is divisible by the
+/// modulus. For negative numbers, this is a lower (more negative) multiple. For example,
+/// `-5 modulo 4` would be `3`, as `-8` is the next lower multiple of `4` and `-8 + 3 = -5`.
+///
+/// The type parameter `Mod` defines the modulus type.
+///
+/// This trait is implemented on all primitive numeric types.
+pub trait Modulo<Mod = Self> {
+
+    /// The type returned by a modulo operation.
     type Output;
 
-    fn modulo(self, other: Rhs) -> Self::Output;
+    /// Computes the modulo operation of this value with the given `modulus`, which must be
+    /// non-negative. The output is guaranteed to be non-negative. See the trait-level documentation
+    /// for details.
+    fn modulo(self, modulus: Mod) -> Self::Output;
 }
 
 macro_rules! impl_modulo_signed {
@@ -14,10 +28,10 @@ macro_rules! impl_modulo_signed {
         impl Modulo for $type {
             type Output = $type;
 
-            fn modulo(self, other: $type) -> $type {
-                match self % other {
+            fn modulo(self, modulus: $type) -> $type {
+                match self % modulus {
                     rem if rem >= <$type as Zero>::ZERO => rem,
-                    rem => rem + other
+                    rem => rem + modulus
                 }
             }
         }
@@ -29,8 +43,8 @@ macro_rules! impl_modulo_unsigned {
         impl Modulo for $type {
             type Output = $type;
 
-            fn modulo(self, other: $type) -> $type {
-                self % other
+            fn modulo(self, modulus: $type) -> $type {
+                self % modulus
             }
         }
     }
@@ -53,10 +67,26 @@ impl_modulo_unsigned!(usize);
 impl_modulo_signed!(f32);
 impl_modulo_signed!(f64);
 
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
+/// argument which implements the [Modulo] and [Clone] traits, and whose [Modulo::Output] implements
+/// the [PartialEq] and [Zero] trait (i.e. can be checked whether it is zero). Ordinarily, these are
+/// numeric primitives.
+///
+/// Example:
+///
+/// ```
+/// use kernal::prelude::*;
+///
+/// assert_that!(15).is_divisible_by(5).is_not_divisible_by(2);
+/// ```
 pub trait RemAssertions<D> {
 
+    /// Asserts that the tested value is divisible by the given `divisor` without remainder, i.e.
+    /// its [Modulo] equivalence class is zero.
     fn is_divisible_by(self, divisor: D) -> Self;
 
+    /// Asserts that the tested value is not divisible by the given `divisor` without remainder,
+    /// i.e. its [Modulo] equivalence class is different from zero.
     fn is_not_divisible_by(self, divisor: D) -> Self;
 }
 
@@ -93,14 +123,37 @@ where
     }
 }
 
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
+/// argument which implements the [Modulo], [Clone], and [Two] traits, and whose [Modulo::Output]
+/// implements the [PartialEq], [One] and [Zero] trait, i.e. the values can be checked for evenness
+/// and oddness. Ordinarily, these are numeric primitives.
+///
+/// Examples:
+///
+/// ```
+/// use kernal::prelude::*;
+///
+/// assert_that!(15).is_odd().is_not_even();
+/// assert_that!(0.5).is_not_odd().is_not_even();
+/// ```
 pub trait EvennessAssertions {
 
+    /// Asserts that the tested value is even, i.e. its [Modulo] equivalence class with two is equal
+    /// to zero.
     fn is_even(self) -> Self;
 
+    /// Asserts that the tested value is not even, i.e. its [Modulo] equivalence class with two is
+    /// different from zero. This differs from being odd for non-integers, which are neither even
+    /// nor odd.
     fn is_not_even(self) -> Self;
 
+    /// Asserts that the tested value is odd, i.e. its [Modulo] equivalence class with two is equal
+    /// to one.
     fn is_odd(self) -> Self;
 
+    /// Asserts that the tested value is not odd, i.e. its [Modulo] equivalence class with two is
+    /// different from one. This differs from being even for non-integers, which are neither even
+    /// nor odd.
     fn is_not_odd(self) -> Self;
 }
 
@@ -150,16 +203,38 @@ where
     }
 }
 
+/// A marker trait for numeric types which may be non-integers. This is implemented by default for
+/// float primitives.
+pub trait MaybeInteger { }
+
+impl MaybeInteger for f32 { }
+impl MaybeInteger for f64 { }
+
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
+/// argument which implements the [MaybeInteger], [Modulo], [Clone], and [One] traits, and whose
+/// [Modulo::Output] implements the [PartialEq] and [Zero] trait, i.e. the values can be checked for
+/// being divisible by one. Ordinarily, these are float primitives.
+///
+/// Example:
+///
+/// ```
+/// use kernal::prelude::*;
+///
+/// assert_that!(1.5).is_no_integer();
+/// ```
 pub trait MaybeIntegerAssertions {
 
+    /// Asserts that the tested value is an integer, i.e. divisible by one according to [Modulo].
     fn is_an_integer(self) -> Self;
 
+    /// Asserts that the tested value is not an integer, i.e. not divisible by one according to
+    /// [Modulo].
     fn is_no_integer(self) -> Self;
 }
 
 impl<T> MaybeIntegerAssertions for AssertThat<T>
 where
-    T: Clone + Debug + Modulo + One,
+    T: Clone + Debug + MaybeInteger + Modulo + One,
     T::Output: PartialEq + Zero
 {
     fn is_an_integer(self) -> Self {
