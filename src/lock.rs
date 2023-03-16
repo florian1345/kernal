@@ -1,9 +1,11 @@
-use std::sync::{Mutex, RwLock, TryLockError};
+use std::borrow::{Borrow, Cow};
+use std::rc::Rc;
+use std::sync::{Arc, Mutex, RwLock, TryLockError};
 
 use crate::{AssertThat, Failure};
 
 /// A trait for all types of locks which can be poisoned. It is implemented for the standard library
-/// types [Mutex] and [RwLock].
+/// types [Mutex] and [RwLock] and references thereof.
 pub trait Lock {
 
     /// Indicates whether this lock is poisoned, i.e. a thread holding the lock panicked before
@@ -24,17 +26,65 @@ macro_rules! impl_lock {
 impl_lock!(Mutex);
 impl_lock!(RwLock);
 
+macro_rules! impl_lock_ref {
+    ($type:ty) => {
+        impl<L: Lock> Lock for $type {
+            fn is_poisoned(&self) -> bool {
+                L::is_poisoned(self.borrow())
+            }
+        }
+    }
+}
+
+impl_lock_ref!(&L);
+impl_lock_ref!(&mut L);
+impl_lock_ref!(Box<L>);
+impl_lock_ref!(Rc<L>);
+impl_lock_ref!(Arc<L>);
+
+impl<'cow, L: Clone + Lock> Lock for Cow<'cow, L> {
+    fn is_poisoned(&self) -> bool {
+        L::is_poisoned(self.borrow())
+    }
+}
+
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
+/// argument that implements the [Lock]. Lock-specialized assertions are located in the
+/// [MutexAssertions] and [RwLockAssertions] traits.
+///
+/// Examples:
+///
+/// ```
+/// use kernal::prelude::*;
+/// use std::sync::{Arc, Mutex};
+/// use std::thread;
+///
+/// let non_poisoned_mutex = Arc::new(Mutex::new(0));
+/// let poisoned_mutex = Arc::new(Mutex::new(0));
+/// let poisoned_mutex_clone = Arc::clone(&poisoned_mutex);
+/// thread::spawn(move || {
+///     let _guard = poisoned_mutex_clone.lock();
+///     panic!();
+/// }).join().unwrap_err();
+///
+/// assert_that!(non_poisoned_mutex).is_not_poisoned();
+/// assert_that!(poisoned_mutex).is_poisoned();
+/// ```
 pub trait LockAssertions<T> {
 
+    /// Asserts that the tested lock is poisoned, i.e. [Lock::is_poisoned] returns `true`, meaning
+    /// some thread panicked before releasing the lock.
     fn is_poisoned(self) -> Self;
 
+    /// Asserts that the tested lock is not poisoned, i.e. [Lock::is_poisoned] returns `false`,
+    /// meaning all threads released the lock or are still running.
     fn is_not_poisoned(self) -> Self;
 }
 
-impl<L: Lock, T: AsRef<L>> LockAssertions<L> for AssertThat<T> {
+impl<L: Lock> LockAssertions<L> for AssertThat<L> {
 
     fn is_poisoned(self) -> Self {
-        if !self.data.as_ref().is_poisoned() {
+        if !self.data.is_poisoned() {
             Failure::new(&self).expected_it("to be poisoned").but_it("was not").fail();
         }
 
@@ -42,7 +92,7 @@ impl<L: Lock, T: AsRef<L>> LockAssertions<L> for AssertThat<T> {
     }
 
     fn is_not_poisoned(self) -> Self {
-        if self.data.as_ref().is_poisoned() {
+        if self.data.is_poisoned() {
             Failure::new(&self).expected_it("not to be poisoned").but_it("was").fail();
         }
 
@@ -58,17 +108,35 @@ fn fail_due_to_try_lock_error<G>(failure_with_expectation: Failure,
     }
 }
 
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with a [Mutex]
+/// argument.
+///
+/// Examples:
+///
+/// ```
+/// use kernal::prelude::*;
+/// use std::sync::Mutex;
+///
+/// let unlocked_mutex = Mutex::new(0);
+/// let locked_mutex = Mutex::new(0);
+/// let _guard = locked_mutex.lock();
+///
+/// assert_that!(&unlocked_mutex).allows_locking();
+/// assert_that!(&locked_mutex).blocks_locking();
+/// ```
 pub trait MutexAssertions<T> {
 
+    /// Asserts that the tested mutex can currently be locked, i.e. no lock is being held.
     fn allows_locking(self) -> Self;
 
+    /// Asserts that the tested mutex can currently not be locked, i.e. a lock is being held.
     fn blocks_locking(self) -> Self;
 }
 
-impl<T, M: AsRef<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
+impl<T, M: Borrow<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
 
     fn allows_locking(self) -> Self {
-        if let Err(error) = self.data.as_ref().try_lock() {
+        if let Err(error) = self.data.borrow().try_lock() {
             let failure = Failure::new(&self).expected_it("to allow acquisition of the lock");
 
             fail_due_to_try_lock_error(failure, error);
@@ -80,7 +148,7 @@ impl<T, M: AsRef<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
     fn blocks_locking(self) -> Self {
         let failure = Failure::new(&self).expected_it("to prevent acquisition of the lock");
 
-        match self.data.as_ref().try_lock() {
+        match self.data.borrow().try_lock() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
             _ => { }
@@ -90,21 +158,43 @@ impl<T, M: AsRef<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
     }
 }
 
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with a [RwLock]
+/// argument.
+///
+/// Examples:
+///
+/// ```
+/// use kernal::prelude::*;
+/// use std::sync::RwLock;
+///
+/// let read_locked_lock = RwLock::new(0);
+/// let _guard = read_locked_lock.read();
+///
+/// assert_that!(&read_locked_lock).allows_reading().blocks_writing();
+/// ```
 pub trait RwLockAssertions<T> {
 
+    /// Asserts that a read-lock can currently be acquired on the tested RW-lock, i.e. no write-lock
+    /// is being held.
     fn allows_reading(self) -> Self;
 
+    /// Asserts that a read-lock can currently not be acquired on the tested RW-lock, i.e. some
+    /// write-lock is being held.
     fn blocks_reading(self) -> Self;
 
+    /// Asserts that a write-lock can currently be acquired on the tested RW-lock, i.e. no read- or
+    /// write-lock is being held.
     fn allows_writing(self) -> Self;
 
+    /// Asserts that a write-lock can currently not be acquired on the tested RW-lock, i.e. some
+    /// read- or write-lock is being held.
     fn blocks_writing(self) -> Self;
 }
 
-impl<T, R: AsRef<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
+impl<T, R: Borrow<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
 
     fn allows_reading(self) -> Self {
-        if let Err(error) = self.data.as_ref().try_read() {
+        if let Err(error) = self.data.borrow().try_read() {
             let failure = Failure::new(&self).expected_it("to allow acquisition of a read lock");
 
             fail_due_to_try_lock_error(failure, error);
@@ -116,7 +206,7 @@ impl<T, R: AsRef<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
     fn blocks_reading(self) -> Self {
         let failure = Failure::new(&self).expected_it("to prevent acquisition of a read lock");
 
-        match self.data.as_ref().try_read() {
+        match self.data.borrow().try_read() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
             _ => { }
@@ -126,7 +216,7 @@ impl<T, R: AsRef<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
     }
 
     fn allows_writing(self) -> Self {
-        if let Err(error) = self.data.as_ref().try_write() {
+        if let Err(error) = self.data.borrow().try_write() {
             let failure = Failure::new(&self).expected_it("to allow acquisition of a write lock");
 
             fail_due_to_try_lock_error(failure, error);
@@ -138,7 +228,7 @@ impl<T, R: AsRef<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
     fn blocks_writing(self) -> Self {
         let failure = Failure::new(&self).expected_it("to prevent acquisition of a write lock");
 
-        match self.data.as_ref().try_write() {
+        match self.data.borrow().try_write() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
             _ => { }
