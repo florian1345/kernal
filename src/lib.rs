@@ -9,7 +9,7 @@
 //! [assert_that] macro gives you an instance on which you can call associated functions to make
 //! your assertions. To be able to use these assertions, the specialized extension traits must be
 //! imported, such as [StringAssertions](string::StringAssertions) when using special assertions for
-//! [String]s. You can glob-import the [prelude] crate to get all imports you need to write every
+//! [String]s. You can glob-import the [prelude] module to get all imports you need to write every
 //! assertion supported by Kernal.
 //!
 //! ```
