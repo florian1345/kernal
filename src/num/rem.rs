@@ -1,3 +1,8 @@
+//! Contains assertions for numeric types which support the [Modulo] operation, such as testing
+//! whether values are even or odd. See [RemAssertions] for divisibility, [EvennessAssertions] for
+//! checking for evenness and oddness, and [MaybeIntegerAssertions] for checking whether numbers are
+//! integers.
+
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};

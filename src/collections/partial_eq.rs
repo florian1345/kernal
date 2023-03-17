@@ -1,3 +1,7 @@
+//! Contains specialized assertions for [Collection]s and [OrderedCollection]s whose items implement
+//! [PartialEq]. See [CollectionPartialEqAssertions] and [OrderedCollectionPartialEqAssertions] for
+//! more details.
+
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::Debug;

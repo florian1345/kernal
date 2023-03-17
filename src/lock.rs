@@ -1,3 +1,7 @@
+//! Contains assertions for standard library lock types. These are additionally grouped by the
+//! [Lock] trait used to check whether locks are poisoned in [LockAssertions]. Furthermore,
+//! specialized assertions are provided by the [MutexAssertions] and [RwLockAssertions] traits.
+
 use std::borrow::{Borrow, Cow};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, RwLock, TryLockError};

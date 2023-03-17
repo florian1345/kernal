@@ -1,3 +1,7 @@
+//! Defines the basic [Map] to generalize all types of maps (such as hash maps) and defines wrapper
+//! structs to create [Collection] views of a map. In addition, general map-based assertions are
+//! provided by [MapAssertions]. Sub-modules of this module provide more specialized assertions.
+
 use std::borrow::Borrow;
 use std::collections::{BTreeMap, HashMap};
 use std::collections::btree_map::{

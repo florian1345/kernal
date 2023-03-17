@@ -1,3 +1,6 @@
+//! Contains assertions to test potentially panicking functions. See [PanicAssertions] for more
+//! details.
+
 use std::any::Any;
 use std::borrow::Borrow;
 use std::panic::{catch_unwind, UnwindSafe};

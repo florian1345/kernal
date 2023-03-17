@@ -1,4 +1,9 @@
+//! Specialized assertions for floating point numbers, grouped by the [Float] trait. This relates to
+//! the special values (infinity, not-a-number), not to the non-integer behavior of floats. See
+//! [FloatAssertions] for more details.
+
 use std::fmt::Debug;
+
 use crate::{AssertThat, Failure};
 
 /// A trait for all types implementing IEEE-754-style floating point numbers, i.e. values which can

@@ -1,5 +1,10 @@
+//! Contains assertions for [Option] values. The [OptionAssertions] works for all [Option]s which
+//! implement [Debug]. [OptionPartialEqAssertions] provides additional assertions if the value type
+//! implements [PartialEq].
+
 use std::borrow::Borrow;
 use std::fmt::Debug;
+
 use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with [Option]

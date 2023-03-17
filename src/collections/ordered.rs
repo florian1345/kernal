@@ -1,3 +1,5 @@
+//! Defines the [OrderedCollection] trait for [Collection] with item ordering.
+
 use std::collections::{BTreeSet, LinkedList, VecDeque};
 
 use crate::collections::Collection;

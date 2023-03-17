@@ -1,3 +1,5 @@
+//! Contains assertions for [bool] values. See the [BooleanAssertions] trait for more details.
+
 use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with [bool]

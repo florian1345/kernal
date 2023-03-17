@@ -1,3 +1,6 @@
+//! Contains assertions for [Signed] numbers and numbers which may be [Zero]. See [SignedAssertions]
+//! and [ZeroableAssertions] for more details.
+
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
