@@ -1,4 +1,47 @@
+//! Kernal allows you to use fluent assertions in Rust tests. That is, instead of writing
+//! `assert_eq!(my_vec.len(), 10)`, you can write `assert_that!(my_vec).has_length(10)`, making your
+//! tests more readable and enabling the framework to provide more expressive error messages. Kernal
+//! aims to provide specialized assertions for as many commonly tested properties as possible.
+//!
+//! # Writing an assertion
+//!
+//! When you write an assertion over a value, you always start with`assert_that!(<your value>)`. The
+//! [assert_that] macro gives you an instance on which you can call associated functions to make
+//! your assertions. To be able to use these assertions, the specialized extension traits must be
+//! imported, such as [StringAssertions](string::StringAssertions) when using special assertions for
+//! [String]s. You can glob-import the [prelude] crate to get all imports you need to write every
+//! assertion supported by Kernal.
+//!
+//! ```
+//! use kernal::prelude::*;
+//!
+//! assert_that!("hello world").contains("world");
+//! ```
+//!
+//! # Chaining
+//!
+//! Every assertion returns the same asserter instance to continue writing assertions on the same
+//! value. In addition, some extension traits define mapping methods that manipulate the data in
+//! some way and return asserter instances on the new data.
+//!
+//! ```
+//! use kernal::prelude::*;
+//!
+//! assert_that!("almost")
+//!     .has_char_length(6)
+//!     .ends_with("most")
+//!     .to_chars()
+//!     .is_sorted_in_strictly_ascending_order();
+//! ```
+//!
+//! # Notes on performance
+//!
+//! The current, early version of this crate does not yet contain many performance optimizations.
+//! Should you write assertions on large amounts of data, this may become a bottleneck. In those
+//! cases, you should consider falling back to standard assertions.
+
 #![allow(clippy::wrong_self_convention)]
+#![warn(missing_docs)]
 
 use std::fmt::Debug;
 

@@ -1,3 +1,6 @@
+//! Contains assertions for types which implement [Error]. See the [ErrorAssertions] trait for more
+//! details.
+
 use std::borrow::Borrow;
 use std::error::Error;
 

@@ -1,3 +1,6 @@
+//! Contains assertions for pointers, which are grouped by the [Pointer] trait. See
+//! [PointerAssertions] for more details.
+
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};

@@ -1,3 +1,5 @@
+//! Contains assertions for [char] values. See the [CharacterAssertions] trait for more details.
+
 use std::borrow::Borrow;
 
 use crate::{AssertThat, Failure};

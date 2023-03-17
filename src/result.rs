@@ -1,5 +1,11 @@
+//! Contains assertions for [Result] values. The [ResultAssertions] works for all [Result]s which
+//! implement [Debug]. [ResultValuePartialEqAssertions] provides additional assertions if the value
+//! type implements [PartialEq] and [ResultErrorPartialEqAssertions] if the error type implements
+//! [PartialEq].
+
 use std::borrow::Borrow;
 use std::fmt::Debug;
+
 use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with [Result]

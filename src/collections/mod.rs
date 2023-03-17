@@ -1,3 +1,7 @@
+//! Defines the basic [Collection] trait to generalize collections such as sets and lists.
+//! Additional assertions for collections are provided by [CollectionAssertions]. Sub-modules
+//! provide further specialization.
+
 use std::collections::{BinaryHeap, BTreeSet, HashSet, LinkedList, VecDeque};
 use std::collections::binary_heap::Iter as BinaryHeapIter;
 use std::collections::btree_set::Iter as BTreeSetIter;
@@ -10,10 +14,11 @@ use std::slice::Iter as SliceIter;
 
 use crate::{AssertThat, Failure};
 
-pub mod multiset;
 pub mod ordered;
 pub mod partial_eq;
 pub mod partial_ord;
+
+pub(crate) mod multiset;
 
 /// A trait for all collections which contain one kind of item, such as slices or sets. This
 /// contrasts with maps, which have keys and values, i.e. two kinds of items.

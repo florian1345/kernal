@@ -1,3 +1,6 @@
+//! Contains assertions for string values, including among others [String] and references to [str].
+//! See [StringAssertions] for more details.
+
 use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with a

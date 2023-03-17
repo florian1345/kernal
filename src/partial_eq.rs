@@ -1,3 +1,6 @@
+//! Contains assertions for values which implement [PartialEq]. See [PartialEqAssertions] for more
+//! details.
+
 use std::borrow::Borrow;
 use std::fmt::Debug;
 

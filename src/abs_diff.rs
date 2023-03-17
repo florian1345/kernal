@@ -1,3 +1,7 @@
+//! Contains assertions for values whose distance to each other can be measured, to check whether
+//! values are close. Such types are grouped by the [AbsDiff] trait. See
+//! [AbsDiffPartialOrdAssertions] for more details.
+
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt::Debug;

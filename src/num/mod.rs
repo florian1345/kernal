@@ -1,3 +1,6 @@
+//! Defines basic numeric traits implemented on appropriate primitive types. Sub-modules contain
+//! assertions for numeric types implementing these traits.
+
 pub mod float;
 pub mod rem;
 pub mod signed;
