@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn is_even_passes_for_eight() {
-        assert_that!(8).is_even();
+        assert_that!(8u32).is_even();
     }
 
     #[test]
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn is_not_odd_passes_for_eight() {
-        assert_that!(8).is_not_odd();
+        assert_that!(8u32).is_not_odd();
     }
 
     #[test]
