@@ -130,12 +130,12 @@ mod tests {
 
     #[test]
     fn is_some_fails_for_none() {
-        assert_fails!((None::<u32>).is_some(), expected it "to be <Some(_)>" but it "was <None>");
+        assert_fails!((None::<i32>).is_some(), expected it "to be <Some(_)>" but it "was <None>");
     }
 
     #[test]
     fn is_none_passes_for_none() {
-        assert_that!(None::<u32>).is_none();
+        assert_that!(None::<i32>).is_none();
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn to_value_fails_for_none() {
-        assert_fails!((None::<u32>).is_some(), expected it "to be <Some(_)>" but it "was <None>");
+        assert_fails!((None::<i32>).to_value(), expected it "to be <Some(_)>" but it "was <None>");
     }
 
     #[test]
