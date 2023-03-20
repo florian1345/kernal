@@ -14,6 +14,7 @@ use std::slice::Iter as SliceIter;
 
 use crate::{AssertThat, Failure};
 
+pub mod ord;
 pub mod ordered;
 pub mod partial_eq;
 pub mod partial_ord;

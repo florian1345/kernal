@@ -7,6 +7,7 @@ pub use crate::abs_diff::AbsDiffPartialOrdAssertions;
 pub use crate::boolean::BooleanAssertions;
 pub use crate::character::CharacterAssertions;
 pub use crate::collections::CollectionAssertions;
+pub use crate::collections::ord::CollectionOrdAssertions;
 pub use crate::collections::partial_eq::{
     CollectionPartialEqAssertions,
     OrderedCollectionPartialEqAssertions
