@@ -24,6 +24,8 @@ use crate::collections::{Collection, CollectionDebug};
 use crate::maps::debug::{HighlightedMapDebug, MapDebug};
 use crate::util::borrow_all;
 
+pub mod partial_eq;
+
 mod debug;
 
 /// A trait for maps which assign [Map::Value]s of one type to [Map::Key]s of (potentially) another

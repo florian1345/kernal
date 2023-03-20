@@ -4,11 +4,11 @@ use crate::maps::Map;
 use std::fmt::{Debug, Formatter};
 use std::fmt;
 
-struct MapEntryDebug<'iter, 'map, M: Map<'map>> {
-    entry: (&'iter M::Key, &'iter M::Value)
+struct MapEntryDebug<'reference, 'map, M: Map<'map>> {
+    entry: (&'reference M::Key, &'reference M::Value)
 }
 
-impl<'iter, 'map, M> Debug for MapEntryDebug<'iter, 'map, M>
+impl<'reference, 'map, M> Debug for MapEntryDebug<'reference, 'map, M>
 where
     M: Map<'map>,
     M::Key: Debug,
@@ -19,19 +19,33 @@ where
     }
 }
 
-struct MapEntriesDebugIter<'map, 'iter, M>
-where
-    M: Map<'map> + 'map,
-    'map: 'iter
-{
-    map_entries_iter: M::EntryIter<'iter>
+pub(crate) struct MapEntriesDebug<'reference, 'map, M: Map<'map>> {
+    map_entries_debug: Vec<MapEntryDebug<'reference, 'map, M>>
 }
 
-impl<'map, 'iter, M: Map<'map>> Iterator for MapEntriesDebugIter<'map, 'iter, M> {
-    type Item = MapEntryDebug<'iter, 'map, M>;
+impl<'reference, 'map, M: Map<'map>> MapEntriesDebug<'reference, 'map, M> {
+    pub(crate) fn new<I>(entries: I) -> MapEntriesDebug<'reference, 'map, M>
+    where
+        I: Iterator<Item = (&'reference M::Key, &'reference M::Value)>
+    {
+        let map_entries_debug = entries
+            .map(|entry| MapEntryDebug::<M> { entry })
+            .collect::<Vec<_>>();
 
-    fn next(&mut self) -> Option<MapEntryDebug<'iter, 'map, M>> {
-        self.map_entries_iter.next().map(|entry| MapEntryDebug { entry })
+        MapEntriesDebug {
+            map_entries_debug
+        }
+    }
+}
+
+impl<'reference, 'map, M> Debug for MapEntriesDebug<'reference, 'map, M>
+where
+    M: Map<'map>,
+    M::Key: Debug,
+    M::Value: Debug
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", CollectionDebug { collection: &self.map_entries_debug })
     }
 }
 
@@ -46,15 +60,7 @@ where
     M::Value: Debug
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let map_entries_debug = self.map.entries()
-            .map(|entry| MapEntryDebug::<M> { entry })
-            .collect::<Vec<_>>();
-
-        let collection_debug = CollectionDebug {
-            collection: &map_entries_debug
-        };
-
-        write!(f, "{:?}", collection_debug)
+        write!(f, "{:?}", MapEntriesDebug::<'_, '_, M>::new(self.map.entries()))
     }
 }
 
