@@ -19,8 +19,6 @@ pub mod ordered;
 pub mod partial_eq;
 pub mod partial_ord;
 
-pub(crate) mod multiset;
-
 /// A trait for all collections which contain one kind of item, such as slices or sets. This
 /// contrasts with maps, which have keys and values, i.e. two kinds of items.
 ///

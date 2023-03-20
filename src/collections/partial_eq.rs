@@ -9,7 +9,7 @@ use std::ops::Range;
 
 use crate::{AssertThat, Failure};
 use crate::collections::{assert_all_match_predicate, Collection, CollectionDebug, HighlightedCollectionDebug};
-use crate::collections::multiset::VecMultiset;
+use crate::util::VecMultiset;
 use crate::collections::ordered::OrderedCollection;
 use crate::util::borrow_all;
 
