@@ -34,6 +34,57 @@
 //!     .is_sorted_in_strictly_ascending_order();
 //! ```
 //!
+//! # Creating custom assertions
+//!
+//! `kernal` allows the creation of custom assertions to test instances of your types in a more
+//! natural way. To do this, create a new trait which has a method for your assertion. This will be
+//! called on the output of the [assert_that] macro. In order to enable its usage, you need to
+//! implement your trait on the [AssertThat] with the type you want to test as a type parameter.
+//! Import the [AssertThatData] trait to get access to the tested data. It is not provided in the
+//! [prelude] module in order to avoid presenting these methods every time the user looks for an
+//! assertion. You can use the [Failure] struct to compose an error message consistent with the
+//! `kernal` crate. The example below demonstrates this process.
+//!
+//! ```
+//! use kernal::{AssertThat, AssertThatData, Failure};
+//! use kernal::prelude::*;
+//!
+//! // Our type for which we want to write assertions.
+//! struct Vector2f32 { x: f32, y: f32 }
+//!
+//! // The custom assertion trait we will later implement on `AssertThat`.
+//! trait Vector2f32Assertions {
+//!     // The custom assertion we want to supply. It is recommended to take an owned `self` and
+//!     // return the same instance to support chaining.
+//!     fn has_euclidean_norm(self, expected_norm: f32, epsilon: f32) -> AssertThat<Vector2f32>;
+//! }
+//!
+//! impl Vector2f32Assertions for AssertThat<Vector2f32> {
+//!     fn has_euclidean_norm(self, expected_norm: f32, epsilon: f32) -> AssertThat<Vector2f32> {
+//!         // We get our data with `self.data()`, supplied by `AssertThatData`
+//!         let vector = self.data();
+//!         let actual_norm = (vector.x * vector.x + vector.y * vector.y).sqrt();
+//!
+//!         if (actual_norm - expected_norm).abs() > epsilon {
+//!             // Here we must fail - using the `Failure` struct
+//!             Failure::new(&self)
+//!                 .expected_it(format!("to have a euclidean norm within <{}> of <{}>",
+//!                     epsilon, expected_norm))
+//!                 .but_it(format!("was <({}, {})>, with a euclidean norm of <{}>",
+//!                     vector.x, vector.y, actual_norm))
+//!                 .fail()
+//!         }
+//!
+//!         // Here the test passes, so we return `self` for chaining
+//!         self
+//!     }
+//! }
+//!
+//! assert_that!(Vector2f32 { x: 3.0, y: 4.0 }).has_euclidean_norm(5.0, 0.01);
+//! assert_that!(|| assert_that!(Vector2f32 { x: 3.0, y: 3.0 }).has_euclidean_norm(5.0, 0.01))
+//!     .panics();
+//! ```
+//!
 //! # Notes on performance
 //!
 //! The current, early version of this crate does not yet contain many performance optimizations.
@@ -80,7 +131,10 @@ pub struct AssertThat<T> {
 
 impl<T> AssertThat<T> {
 
-    #[doc(hidden)]
+    /// Creates a new assert-that instance for the given tested `data` and with the given
+    /// `expression` string representing the actual code which evaluated to the tested data. This
+    /// may also be a small description (such as `chars of <my_string>`) in case assertions are
+    /// transformed.
     #[must_use]
     pub fn new(data: T, expression: String) -> AssertThat<T> {
         AssertThat {
@@ -173,6 +227,37 @@ impl Failure {
             .expect("incomplete failure: no but_it provided");
 
         format!("expected: <{}> {}\nbut:      it {}", &self.expression, expected_it, but_it)
+    }
+}
+
+/// This trait provides access to the tested data of an [AssertThat] to write custom assertions.
+pub trait AssertThatData<T> {
+
+    /// Gets a reference to the tested data. When writing a custom assertion, this is the data on
+    /// which you check conditions.
+    fn data(&self) -> &T;
+
+    /// Gets a string representing the actual code that evaluated to the tested data. This may also
+    /// be a small description (such as `chars of <my_string>`) in case assertions are transformed.
+    fn expression(&self) -> &str;
+
+    /// Converts this assert-that instance into a tuple containing the tested data and expression
+    /// [String].
+    fn into_parts(self) -> (T, String);
+}
+
+impl<T> AssertThatData<T> for AssertThat<T> {
+
+    fn data(&self) -> &T {
+        &self.data
+    }
+
+    fn expression(&self) -> &str {
+        &self.expression
+    }
+
+    fn into_parts(self) -> (T, String) {
+        (self.data, self.expression)
     }
 }
 
