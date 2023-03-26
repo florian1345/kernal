@@ -55,24 +55,41 @@ where
         I: IntoIterator<Item = E>;
 }
 
-fn compute_missing_and_superfluous<'collection, 'item, C>(collection: &'item C,
-    expected_items: &'item [&C::Item]) -> (VecMultiset<&'item C::Item>, VecMultiset<&'item C::Item>)
+pub(crate) fn compute_missing_and_superfluous<'item, T, I>(actual_items: I,
+    expected_items: &'item [&T]) -> (VecMultiset<&'item T>, VecMultiset<&'item T>)
 where
-    C: Collection<'collection>,
-    C::Item: PartialEq,
-    'collection: 'item,
+    T: PartialEq + 'item,
+    I: Iterator<Item = &'item T>
 {
-    let expected_items: Vec<&C::Item> = borrow_all(expected_items);
+    let expected_items: Vec<&T> = borrow_all(expected_items);
     let mut missing_multiset = expected_items.iter().cloned().collect::<VecMultiset<_>>();
-    let mut superfluous_multiset: VecMultiset<&C::Item> = VecMultiset::new();
+    let mut superfluous_multiset: VecMultiset<&T> = VecMultiset::new();
 
-    for item in collection.iterator() {
+    for item in actual_items {
         if !missing_multiset.remove(&item) {
             superfluous_multiset.add(item);
         }
     }
 
     (missing_multiset, superfluous_multiset)
+}
+
+pub(crate) fn format_error_for_missing_and_superfluous<T>(missing_items: &VecMultiset<T>,
+    superfluous_items: &VecMultiset<T>) -> String
+where
+    T: Debug
+{
+    let mut errors = Vec::new();
+
+    if !missing_items.is_empty() {
+        errors.push(format!("lacks {:?}", missing_items));
+    }
+
+    if !superfluous_items.is_empty() {
+        errors.push(format!("additionally has {:?}", superfluous_items));
+    }
+
+    errors.join(" and ")
 }
 
 impl<'collection, C> CollectionPartialEqAssertions<'collection, C> for AssertThat<C>
@@ -103,7 +120,8 @@ where
     fn contains_all_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
-        let (missing_multiset, _) = compute_missing_and_superfluous(&self.data, &expected_items);
+        let (missing_multiset, _) =
+            compute_missing_and_superfluous(self.data.iterator(), &expected_items);
 
         if !missing_multiset.is_empty() {
             let expected_items_debug = CollectionDebug { collection: &expected_items };
@@ -147,24 +165,17 @@ where
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
         let (missing_multiset, superfluous_multiset) =
-            compute_missing_and_superfluous(&self.data, &expected_items);
-        let mut errors = Vec::new();
+            compute_missing_and_superfluous(self.data.iterator(), &expected_items);
 
-        if !missing_multiset.is_empty() {
-            errors.push(format!("lacks {:?}", &missing_multiset));
-        }
-
-        if !superfluous_multiset.is_empty() {
-            errors.push(format!("additionally has {:?}", &superfluous_multiset));
-        }
-
-        if !errors.is_empty() {
+        if !missing_multiset.is_empty() || !superfluous_multiset.is_empty() {
             let expected_items_debug = CollectionDebug { collection: &expected_items };
             let collection_debug = CollectionDebug { collection: &self.data };
+            let error =
+                format_error_for_missing_and_superfluous(&missing_multiset, &superfluous_multiset);
 
             Failure::new(&self)
                 .expected_it(format!("to contain exactly in any order <{:?}>", expected_items_debug))
-                .but_it(format!("was <{:?}>, which {}", collection_debug, errors.join(" and ")))
+                .but_it(format!("was <{:?}>, which {}", collection_debug, error))
                 .fail();
         }
 

@@ -9,6 +9,7 @@ use crate::util::{borrow_all, borrow_all_pairs};
 
 use std::borrow::Borrow;
 use std::fmt::Debug;
+use crate::collections::partial_eq::{compute_missing_and_superfluous, format_error_for_missing_and_superfluous};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Map] trait whose [Map::Value] implements [PartialEq] in addition
@@ -35,7 +36,10 @@ pub trait MapPartialEqAssertions<'map, M: Map<'map>> {
     fn does_not_contain_value<V: Borrow<M::Value>>(self, value: V) -> Self;
 
     /// Asserts that for each of the given `values`, the tested map contains an entry with a value
-    /// equal to it according to [PartialEq].
+    /// equal to it according to [PartialEq]. If the provided iterator contains multiple equal
+    /// values, this function asserts that the tested map contains at least that number of equal
+    /// values, so `[ k1 => 1, k2 => 1, k3 => 2]` contains values `[1, 1]`, but not values
+    /// `[1, 1, 1]`.
     fn contains_values<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
@@ -44,6 +48,13 @@ pub trait MapPartialEqAssertions<'map, M: Map<'map>> {
     /// Asserts that for each of the given `values`, the tested map contains no entry with a value
     /// equal to it according to [PartialEq].
     fn does_not_contain_values<V, I>(self, values: I) -> Self
+    where
+        V: Borrow<M::Value>,
+        I: IntoIterator<Item = V>;
+
+    /// Asserts that there is a one-to-one matching of the given `values` and the values of the
+    /// tested map such that matched elements are equal according to [PartialEq].
+    fn contains_exactly_values<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
         I: IntoIterator<Item = V>;
@@ -177,18 +188,17 @@ where
         V: Borrow<M::Value>,
         I: IntoIterator<Item = V>
     {
-        let values_unborrowed = values.into_iter().collect::<Vec<_>>();
-        let values: Vec<&M::Value> = borrow_all(&values_unborrowed);
-        let missing_value = values.iter()
-            .find(|value| get_key(&self.data, value).is_none());
+        let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
+        let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
+        let (missing_values, _) = compute_missing_and_superfluous(self.data.values(), &expected_values);
 
-        if let Some(missing_value) = missing_value {
-            let values_debug = CollectionDebug { collection: &values };
+        if !missing_values.is_empty() {
+            let values_debug = CollectionDebug { collection: &expected_values };
             let map_debug = MapDebug { map: &self.data };
 
             Failure::new(&self)
                 .expected_it(format!("to contain all of the values <{:?}>", values_debug))
-                .but_it(format!("was <{:?}>, which is missing <{:?}>", map_debug, missing_value))
+                .but_it(format!("was <{:?}>, which lacks {:?}", map_debug, missing_values))
                 .fail();
         }
 
@@ -200,11 +210,12 @@ where
         V: Borrow<M::Value>,
         I: IntoIterator<Item = V>
     {
-        let values_unborrowed = values.into_iter().collect::<Vec<_>>();
-        let values: Vec<&M::Value> = borrow_all(&values_unborrowed);
+        let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
+        let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
+        let violating_key = expected_values.iter().find_map(|value| get_key(&self.data, value));
 
-        if let Some(violating_key) = values.iter().find_map(|value| get_key(&self.data, value)) {
-            let values_debug = CollectionDebug { collection: &values };
+        if let Some(violating_key) = violating_key {
+            let values_debug = CollectionDebug { collection: &expected_values };
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
                 highlighted_key: violating_key
@@ -213,6 +224,31 @@ where
             Failure::new(&self)
                 .expected_it(format!("to contain none of the values <{:?}>", values_debug))
                 .but_it(format!("was <{:?}>", highlighted_map_debug))
+                .fail();
+        }
+
+        self
+    }
+
+    fn contains_exactly_values<V, I>(self, values: I) -> Self
+    where
+        V: Borrow<M::Value>,
+        I: IntoIterator<Item = V>
+    {
+        let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
+        let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
+        let (missing_values, superfluous_values) =
+            compute_missing_and_superfluous(self.data.values(), &expected_values);
+
+        if !missing_values.is_empty() || !superfluous_values.is_empty() {
+            let expected_values_debug = CollectionDebug { collection: &expected_values };
+            let map_debug = MapDebug { map: &self.data };
+            let error =
+                format_error_for_missing_and_superfluous(&missing_values, &superfluous_values);
+
+            Failure::new(&self)
+                .expected_it(format!("to contain exactly the values <{:?}>", expected_values_debug))
+                .but_it(format!("was <{:?}>, which {}", map_debug, error))
                 .fail();
         }
 
@@ -457,24 +493,54 @@ mod tests {
     }
 
     #[test]
+    fn contains_values_passes_for_map_with_exact_multiplicity() {
+        assert_that!(HashMap::from([("apple", 2), ("banana", 3), ("cherry", 3)]))
+            .contains_values(&[3, 3]);
+    }
+
+    #[test]
+    fn contains_values_passes_for_map_with_higher_multiplicity() {
+        assert_that!(HashMap::from([("apple", 3), ("banana", 3), ("cherry", 3)]))
+            .contains_values(&[3, 3]);
+    }
+
+    #[test]
     fn contains_values_fails_for_empty_map_and_any_expected_value() {
         assert_fails!((HashMap::<&str, i32>::new()).contains_values(&[1]),
             expected it "to contain all of the values <[ 1 ]>"
-            but it "was <[ ]>, which is missing <1>");
+            but it "was <[ ]>, which lacks 1 of <1>");
     }
 
     #[test]
     fn contains_values_fails_for_single_expected_value_not_in_map() {
         assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).contains_values(&[3]),
             expected it "to contain all of the values <[ 3 ]>"
-            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which is missing <3>");
+            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which lacks 1 of <3>");
     }
 
     #[test]
     fn contains_values_fails_for_mixed_expected_values() {
         assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).contains_values(&[2, 3]),
             expected it "to contain all of the values <[ 2, 3 ]>"
-            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which is missing <3>");
+            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which lacks 1 of <3>");
+    }
+
+    #[test]
+    fn contains_values_fails_for_map_with_lower_multiplicity() {
+        assert_fails!((BTreeMap::from([("apple", 2), ("banana", 3), ("cherry", 4)]))
+            .contains_values(&[3, 3]),
+            expected it "to contain all of the values <[ 3, 3 ]>"
+            but it "was <[ \"apple\" => 2, \"banana\" => 3, \"cherry\" => 4 ]>, \
+                which lacks 1 of <3>");
+    }
+
+    #[test]
+    fn contains_values_fails_for_map_with_multiple_missing_elements() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .contains_values(&[3, 3, 3, 4]),
+            expected it "to contain all of the values <[ 3, 3, 3, 4 ]>"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2, \"cherry\" => 3 ]>, \
+                which lacks 2 of <3>, 1 of <4>");
     }
 
     #[test]
@@ -512,6 +578,67 @@ mod tests {
         assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).does_not_contain_values(&[2, 3]),
             expected it "to contain none of the values <[ 2, 3 ]>"
             but it "was <[ \"apple\" => 1, [\"banana\" => 2] ]>");
+    }
+
+    #[test]
+    fn contains_exactly_values_passes_for_empty_map_and_no_expected_values() {
+        assert_that!(BTreeMap::<&str, i32>::new()).contains_exactly_values(&[] as &[i32]);
+    }
+
+    #[test]
+    fn contains_exactly_values_passes_for_singleton_map_of_expected_value() {
+        assert_that!(HashMap::from([("apple", 42)])).contains_exactly_values(&[42]);
+    }
+
+    #[test]
+    fn contains_exactly_values_passes_for_larger_map_of_expected_values_in_different_order() {
+        assert_that!(BTreeMap::from([("apple", 42), ("banana", 43), ("cherry", 44)]))
+            .contains_exactly_values(&[44, 43, 42] as &[i32]);
+    }
+
+    #[test]
+    fn contains_exactly_values_passes_for_map_with_correct_higher_multiplicity() {
+        assert_that!(HashMap::from([("apple", 42), ("banana", 42)]))
+            .contains_exactly_values(&[42, 42]);
+    }
+
+    #[test]
+    fn contains_exactly_values_fails_for_empty_map_and_single_expected_value() {
+        assert_fails!((HashMap::<&str, i32>::new()).contains_exactly_values(&[42]),
+            expected it "to contain exactly the values <[ 42 ]>"
+            but it "was <[ ]>, which lacks 1 of <42>");
+    }
+
+    #[test]
+    fn contains_exactly_values_fails_for_singleton_map_and_no_expected_values() {
+        assert_fails!((BTreeMap::from([("apple", 42)])).contains_exactly_values(&[] as &[i32]),
+            expected it "to contain exactly the values <[ ]>"
+            but it "was <[ \"apple\" => 42 ]>, which additionally has 1 of <42>");
+    }
+
+    #[test]
+    fn contains_exactly_values_fails_for_map_with_lower_multiplicity() {
+        assert_fails!((HashMap::from([("apple", 42)])).contains_exactly_values(&[42, 42, 42]),
+            expected it "to contain exactly the values <[ 42, 42, 42 ]>"
+            but it "was <[ \"apple\" => 42 ]>, which lacks 2 of <42>");
+    }
+
+    #[test]
+    fn contains_exactly_values_fails_for_map_with_higher_multiplicity() {
+        assert_fails!((BTreeMap::from([("apple", 42), ("banana", 42), ("cherry", 42)]))
+            .contains_exactly_values(&[42]),
+            expected it "to contain exactly the values <[ 42 ]>"
+            but it "was <[ \"apple\" => 42, \"banana\" => 42, \"cherry\" => 42 ]>, \
+                which additionally has 2 of <42>");
+    }
+
+    #[test]
+    fn contains_exactly_values_fails_for_map_with_multiple_missing_and_superfluous_values() {
+        assert_fails!((BTreeMap::from([("apple", 42), ("banana", 43), ("cherry", 44)]))
+            .contains_exactly_values(&[41, 42, 45]),
+            expected it "to contain exactly the values <[ 41, 42, 45 ]>"
+            but it "was <[ \"apple\" => 42, \"banana\" => 43, \"cherry\" => 44 ]>, \
+                which lacks 1 of <41>, 1 of <45> and additionally has 1 of <43>, 1 of <44>");
     }
 
     #[test]
