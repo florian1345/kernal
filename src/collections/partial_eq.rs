@@ -929,6 +929,13 @@ mod tests {
     }
 
     #[test]
+    fn starts_with_fails_for_prefix_longer_than_collection() {
+        assert_fails!((&[1, 2, 3]).starts_with(&[1, 2, 3, 4]),
+            expected it "to start with the prefix <[ 1, 2, 3, 4 ]>"
+            but it "was <[ 1, 2, 3 ]>");
+    }
+
+    #[test]
     fn does_not_start_with_passes_for_single_element_not_contained_in_collection() {
         assert_that!(&[1, 2, 3]).does_not_start_with(&[4]);
     }
@@ -941,6 +948,11 @@ mod tests {
     #[test]
     fn does_not_start_with_passes_for_initially_correct_but_later_incorrect_prefix() {
         assert_that!(&[1, 2, 3]).does_not_start_with(&[1, 3]);
+    }
+
+    #[test]
+    fn does_not_start_with_passes_for_prefix_longer_than_collection() {
+        assert_that!(&[1, 2, 3]).does_not_start_with(&[1, 2, 3, 4]);
     }
 
     #[test]
@@ -1001,6 +1013,13 @@ mod tests {
     }
 
     #[test]
+    fn ends_with_fails_for_suffix_longer_than_collection() {
+        assert_fails!((&[1, 2, 3]).ends_with(&[1, 2, 3, 4]),
+            expected it "to end with the suffix <[ 1, 2, 3, 4 ]>"
+            but it "was <[ 1, 2, 3 ]>");
+    }
+
+    #[test]
     fn does_not_end_with_passes_for_single_element_not_contained_in_collection() {
         assert_that!(&[1, 2, 3]).does_not_end_with(&[4]);
     }
@@ -1013,6 +1032,11 @@ mod tests {
     #[test]
     fn does_not_end_with_passes_for_initially_correct_but_later_incorrect_suffix() {
         assert_that!(&[1, 2, 3]).does_not_end_with(&[2, 2]);
+    }
+
+    #[test]
+    fn does_not_end_with_passes_for_suffix_longer_than_collection() {
+        assert_that!(&[1, 2, 3]).does_not_end_with(&[1, 2, 3, 4]);
     }
 
     #[test]
