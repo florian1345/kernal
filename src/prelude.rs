@@ -34,3 +34,4 @@ pub use crate::result::{
     ResultValuePartialEqAssertions
 };
 pub use crate::string::StringAssertions;
+pub use crate::string::pattern::StringPatternAssertions;
