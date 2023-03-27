@@ -420,6 +420,12 @@ pub trait MapAssertions<'map, M: Map<'map>> {
     /// i.e. [Map::get] returns `None`.
     fn does_not_contain_keys<K: Borrow<M::Key>, I: IntoIterator<Item = K>>(self, keys: I) -> Self;
 
+    /// Asserts that there is a one-to-one mapping of keys in the tested map and in the given
+    /// iterator of `keys`, which are considered equal by the tested map type's standards (see
+    /// [Map::are_keys_equal]). The order of the given `keys` iterator is irrelevant and duplicate
+    /// keys are ignored.
+    fn contains_exactly_keys<K: Borrow<M::Key>, I: IntoIterator<Item = K>>(self, keys: I) -> Self;
+
     /// Converts the tested map into a [Collection] that contains its keys and allows assertions on
     /// it.
     fn to_keys(self) -> AssertThat<MapKeys<'map, M>>;
@@ -578,6 +584,42 @@ where
                 .expected_it(format!("not to contain entries for the keys <{:?}>", keys_debug))
                 .but_it(format!("was <{:?}>", map_debug))
                 .fail();
+        }
+
+        self
+    }
+
+    fn contains_exactly_keys<K: Borrow<M::Key>, I: IntoIterator<Item = K>>(self, keys: I) -> Self {
+        let expected_keys_unborrowed = keys.into_iter().collect::<Vec<_>>();
+        let expected_keys: Vec<&M::Key> = borrow_all(&expected_keys_unborrowed);
+        let missing_keys = expected_keys.iter().cloned()
+            .filter(|&expected_key| self.data.get(expected_key).is_none())
+            .collect::<Vec<_>>();
+        let superfluous_keys: Vec<&M::Key> = self.data.keys()
+            .filter(|actual_key| !expected_keys.iter()
+                .any(|expected_key| M::are_keys_equal(actual_key, expected_key)))
+            .collect::<Vec<_>>();
+        let mut errors = Vec::new();
+
+        if !missing_keys.is_empty() {
+            let missing_keys_debug = CollectionDebug { collection: &missing_keys };
+            errors.push(format!("lacks <{:?}>", missing_keys_debug));
+        }
+
+        if !superfluous_keys.is_empty() {
+            let superfluous_keys_debug = CollectionDebug { collection: &superfluous_keys };
+            errors.push(format!("additionally has <{:?}>", superfluous_keys_debug));
+        }
+
+        if !errors.is_empty() {
+            let expected_keys_debug = CollectionDebug { collection: &expected_keys };
+            let map_debug = MapDebug { map: &self.data };
+            let error_message = errors.join(" and ");
+
+            Failure::new(&self)
+                .expected_it(format!("to contain exactly the keys <{:?}>", expected_keys_debug))
+                .but_it(format!("was <{:?}>, which {}", map_debug, error_message))
+                .fail()
         }
 
         self
@@ -918,6 +960,55 @@ mod tests {
             expected it
                 "not to contain entries for the keys <[ \"banana\", \"cherry\", \"dragon fruit\" ]>"
             but it "was <[ \"apple\" => 1, [\"cherry\" => 2] ]>");
+    }
+
+    #[test]
+    fn contains_exactly_keys_passes_for_empty_map_and_no_keys() {
+        assert_that!(HashMap::<&str, i32>::new()).contains_exactly_keys(&[] as &[&str]);
+    }
+
+    #[test]
+    fn contains_exactly_keys_passes_for_singleton_map_with_correct_keys() {
+        assert_that!(BTreeMap::from([("apple", 1)])).contains_exactly_keys(&["apple"]);
+    }
+
+    #[test]
+    fn contains_exactly_keys_passes_for_larger_map_with_correct_keys() {
+        assert_that!(HashMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .contains_exactly_keys(&["cherry", "apple", "banana"]);
+    }
+
+    #[test]
+    fn contains_exactly_keys_fails_for_empty_map_and_some_key() {
+        assert_fails!((BTreeMap::<&str, i32>::new()).contains_exactly_keys(&["apple"]),
+            expected it "to contain exactly the keys <[ \"apple\" ]>"
+            but it "was <[ ]>, which lacks <[ \"apple\" ]>");
+    }
+
+    #[test]
+    fn contains_exactly_keys_fails_for_map_missing_keys() {
+        assert_fails!((HashMap::from([("banana", 2)]))
+            .contains_exactly_keys(&["apple", "banana", "cherry"]),
+            expected it "to contain exactly the keys <[ \"apple\", \"banana\", \"cherry\" ]>"
+            but it "was <[ \"banana\" => 2 ]>, which lacks <[ \"apple\", \"cherry\" ]>");
+    }
+
+    #[test]
+    fn contains_exactly_keys_fails_for_map_with_additional_keys() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .contains_exactly_keys(&["banana"]),
+            expected it "to contain exactly the keys <[ \"banana\" ]>"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2, \"cherry\" => 3 ]>, \
+                which additionally has <[ \"apple\", \"cherry\" ]>");
+    }
+
+    #[test]
+    fn contains_exactly_keys_fails_for_map_with_missing_and_additional_keys() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .contains_exactly_keys(&["apple", "dragon fruit", "cherry"]),
+            expected it "to contain exactly the keys <[ \"apple\", \"dragon fruit\", \"cherry\" ]>"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2, \"cherry\" => 3 ]>, \
+                which lacks <[ \"dragon fruit\" ]> and additionally has <[ \"banana\" ]>");
     }
 
     #[test]
