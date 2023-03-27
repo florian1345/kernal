@@ -1047,13 +1047,15 @@ mod tests {
 
     #[test]
     fn contains_exactly_keys_passes_for_larger_map_with_correct_keys() {
-        assert_that!(HashMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+        assert_that!(&HashMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
             .contains_exactly_keys(&["cherry", "apple", "banana"]);
     }
 
     #[test]
     fn contains_exactly_keys_fails_for_empty_map_and_some_key() {
-        assert_fails!((BTreeMap::<&str, i32>::new()).contains_exactly_keys(&["apple"]),
+        let map = BTreeMap::<&str, i32>::new();
+
+        assert_fails!((&map).contains_exactly_keys(&["apple"]),
             expected it "to contain exactly the keys <[ \"apple\" ]>"
             but it "was <[ ]>, which lacks <[ \"apple\" ]>");
     }
