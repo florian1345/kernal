@@ -667,6 +667,79 @@ mod tests {
 
     use super::*;
 
+    use std::iter::Empty;
+    use std::slice::Iter as SliceIter;
+
+    struct MockMap {
+        keys: Vec<i32>
+    }
+
+    impl<'map> Map<'map> for MockMap {
+        type Key = i32;
+        type Value = i32;
+        type KeyIter<'iter> = SliceIter<'iter, i32>
+        where
+            Self: 'iter,
+            'map: 'iter;
+        type ValueIter<'iter> = Empty<&'iter i32>
+        where
+            Self: 'iter,
+            'map: 'iter;
+        type EntryIter<'iter> = Empty<(&'iter i32, &'iter i32)>
+        where
+            Self: 'iter,
+            'map: 'iter;
+
+        fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
+        where
+            'map: 'reference
+        {
+            self.keys.iter()
+        }
+
+        fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
+        where
+            'map: 'reference
+        {
+            panic!("mock map values not expected to be called")
+        }
+
+        fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
+        where
+            'map: 'reference
+        {
+            panic!("mock map entries not expected to be called")
+        }
+
+        fn get<Q: Borrow<i32>>(&self, _: &Q) -> Option<&i32> {
+            panic!("mock map get not expected to be called")
+        }
+
+        fn are_keys_equal(_: &i32, _: &i32) -> bool {
+            panic!("mock map are_keys_equal not expected to be called")
+        }
+    }
+
+    #[test]
+    fn default_len_works_for_empty_map() {
+        assert_that!(MockMap { keys: vec![] }).has_length(0);
+    }
+
+    #[test]
+    fn default_is_empty_for_empty_map() {
+        assert_that!(MockMap { keys: vec![] }).is_empty();
+    }
+
+    #[test]
+    fn default_len_works_for_larger_map() {
+        assert_that!(MockMap { keys: vec![2, 4, 6] }).has_length(3);
+    }
+
+    #[test]
+    fn default_is_empty_for_larger_map() {
+        assert_that!(MockMap { keys: vec![2, 4, 6] }).is_not_empty();
+    }
+
     #[test]
     fn is_empty_passes_for_empty_map() {
         assert_that!(HashMap::<String, u32>::new()).is_empty();
