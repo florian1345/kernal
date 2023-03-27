@@ -193,7 +193,7 @@ where
 /// use kernal::prelude::*;
 ///
 /// assert_that!(&[1, 2, 3, 4])
-///     .does_not_contain_substring(&[1, 3])
+///     .does_not_contain_contiguous_subsequence(&[1, 3])
 ///     .contains_subsequence(&[1, 2, 4])
 ///     .starts_with(&[1, 2])
 ///     .does_not_end_with(&[2, 3]);
@@ -202,16 +202,16 @@ pub trait OrderedCollectionPartialEqAssertions<'collection, C>
 where
     C: OrderedCollection<'collection>
 {
-    /// Asserts that there is a substring (contiguous subsequence) in the tested collection that
-    /// equals the given `substring` in order according to [PartialEq].
-    fn contains_substring<E, I>(self, substring: I) -> Self
+    /// Asserts that there is a contiguous subsequence in the tested collection that equals the
+    /// given `subsequence` in order according to [PartialEq].
+    fn contains_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>;
 
-    /// Asserts that there is no substring (contiguous subsequence) in the tested collection that
-    /// equals the given `substring` in order according to [PartialEq].
-    fn does_not_contain_substring<E, I>(self, substring: I) -> Self
+    /// Asserts that there is no contiguous subsequence in the tested collection that equals the
+    /// given `subsequence` in order according to [PartialEq].
+    fn does_not_contain_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>;
@@ -230,22 +230,22 @@ where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>;
 
-    /// Given a `prefix` of length `n`, asserts that the substring consisting of the first `n`
+    /// Given a `prefix` of length `n`, asserts that the subsequence consisting of the first `n`
     /// elements of the tested collection is equal to the given `prefix` in order according to
     /// [PartialEq].
     fn starts_with<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, prefix: I) -> Self;
 
-    /// Given a `prefix` of length `n`, asserts that the substring consisting of the first `n`
+    /// Given a `prefix` of length `n`, asserts that the subsequence consisting of the first `n`
     /// elements of the tested collection is not equal to the given `prefix` at at least one
     /// position according to [PartialEq].
     fn does_not_start_with<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, prefix: I) -> Self;
 
-    /// Given a `suffix` of length `n`, asserts that the substring consisting of the last `n`
+    /// Given a `suffix` of length `n`, asserts that the subsequence consisting of the last `n`
     /// elements of the tested collection is equal to the given `suffix` in order according to
     /// [PartialEq].
     fn ends_with<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, suffix: I) -> Self;
 
-    /// Given a `suffix` of length `n`, asserts that the substring consisting of the last `n`
+    /// Given a `suffix` of length `n`, asserts that the subsequence consisting of the last `n`
     /// elements of the tested collection is not equal to the given `suffix` at at least one
     /// position according to [PartialEq].
     fn does_not_end_with<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, suffix: I) -> Self;
@@ -259,7 +259,7 @@ where
         I: IntoIterator<Item = E>;
 }
 
-fn find_substring<'collection, C>(collection: &C, substring: &[&C::Item])
+fn find_contiguous_subsequence<'collection, C>(collection: &C, subsequence: &[&C::Item])
     -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
@@ -267,10 +267,10 @@ where
 {
     let collection_vec = collection.iterator().collect::<Vec<_>>();
 
-    for start in 0..=(collection_vec.len() - substring.len()) {
-        let range = start..(start + substring.len());
+    for start in 0..=(collection_vec.len() - subsequence.len()) {
+        let range = start..(start + subsequence.len());
 
-        if &collection_vec[range.clone()] == substring {
+        if &collection_vec[range.clone()] == subsequence {
             return Some(vec![range]);
         }
     }
@@ -414,22 +414,22 @@ where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq
 {
-    fn contains_substring<E, I>(self, substring: I) -> Self
+    fn contains_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>
     {
-        assert_contains_subsequence_kind(
-            self, substring, find_substring, "to contain the substring")
+        assert_contains_subsequence_kind(self,
+            subsequence, find_contiguous_subsequence, "to contain the contiguous subsequence")
     }
 
-    fn does_not_contain_substring<E, I>(self, substring: I) -> Self
+    fn does_not_contain_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>
     {
-        assert_does_not_contain_subsequence_kind(
-            self, substring, find_substring, "not to contain the substring")
+        assert_does_not_contain_subsequence_kind(self,
+            subsequence, find_contiguous_subsequence, "not to contain the contiguous subsequence")
     }
 
     fn contains_subsequence<E, I>(self, subsequence: I) -> Self
@@ -713,111 +713,112 @@ mod tests {
     }
 
     #[test]
-    fn contains_substring_passes_for_empty_substring() {
-        assert_that!(&[1]).contains_substring(&[]);
+    fn contains_contiguous_subsequence_passes_for_empty_subsequence() {
+        assert_that!(&[1]).contains_contiguous_subsequence(&[]);
     }
 
     #[test]
-    fn contains_substring_passes_for_entire_collection() {
-        assert_that!(&[1, 2, 3]).contains_substring(&[1, 2, 3]);
+    fn contains_contiguous_subsequence_passes_for_entire_collection() {
+        assert_that!(&[1, 2, 3]).contains_contiguous_subsequence(&[1, 2, 3]);
     }
 
     #[test]
-    fn contains_substring_passes_for_prefix() {
-        assert_that!(&[1, 2, 3]).contains_substring(&[1, 2]);
+    fn contains_contiguous_subsequence_passes_for_prefix() {
+        assert_that!(&[1, 2, 3]).contains_contiguous_subsequence(&[1, 2]);
     }
 
     #[test]
-    fn contains_substring_passes_for_suffix() {
-        assert_that!(&[1, 2, 3]).contains_substring(&[2, 3]);
+    fn contains_contiguous_subsequence_passes_for_suffix() {
+        assert_that!(&[1, 2, 3]).contains_contiguous_subsequence(&[2, 3]);
     }
 
     #[test]
-    fn contains_substring_passes_for_inner_substring() {
-        assert_that!(&[1, 2, 3, 4, 5]).contains_substring(&[2, 3, 4]);
+    fn contains_contiguous_subsequence_passes_for_inner_subsequence() {
+        assert_that!(&[1, 2, 3, 4, 5]).contains_contiguous_subsequence(&[2, 3, 4]);
     }
 
     #[test]
-    fn contains_substring_passes_for_overlapping_occurrences() {
-        assert_that!(&[1, 2, 1, 2, 1]).contains_substring(&[1, 2, 1]);
+    fn contains_contiguous_subsequence_passes_for_overlapping_occurrences() {
+        assert_that!(&[1, 2, 1, 2, 1]).contains_contiguous_subsequence(&[1, 2, 1]);
     }
 
     #[test]
-    fn contains_substring_fails_for_non_contained_element() {
-        assert_fails!((&[1, 2, 3]).contains_substring(&[4]),
-            expected it "to contain the substring <[ 4 ]>"
+    fn contains_contiguous_subsequence_fails_for_non_contained_element() {
+        assert_fails!((&[1, 2, 3]).contains_contiguous_subsequence(&[4]),
+            expected it "to contain the contiguous subsequence <[ 4 ]>"
             but it "was <[ 1, 2, 3 ]>");
     }
 
     #[test]
-    fn contains_substring_fails_for_almost_completely_contained_substring() {
-        assert_fails!((&[1, 2, 1, 2]).contains_substring(&[2, 1, 1]),
-            expected it "to contain the substring <[ 2, 1, 1 ]>"
+    fn contains_contiguous_subsequence_fails_for_almost_completely_contained_subsequence() {
+        assert_fails!((&[1, 2, 1, 2]).contains_contiguous_subsequence(&[2, 1, 1]),
+            expected it "to contain the contiguous subsequence <[ 2, 1, 1 ]>"
             but it "was <[ 1, 2, 1, 2 ]>");
     }
 
     #[test]
-    fn contains_substring_fails_for_subsequence_that_is_not_substring() {
-        assert_fails!((&[1, 2, 3]).contains_substring(&[1, 3]),
-            expected it "to contain the substring <[ 1, 3 ]>"
+    fn contains_contiguous_subsequence_fails_for_subsequence_that_is_not_subsequence() {
+        assert_fails!((&[1, 2, 3]).contains_contiguous_subsequence(&[1, 3]),
+            expected it "to contain the contiguous subsequence <[ 1, 3 ]>"
             but it "was <[ 1, 2, 3 ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_empty_substring() {
-        assert_fails!((&[1]).does_not_contain_substring(&[]),
-            expected it "not to contain the substring <[ ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_empty_subsequence() {
+        assert_fails!((&[1]).does_not_contain_contiguous_subsequence(&[]),
+            expected it "not to contain the contiguous subsequence <[ ]>"
             but it "was <[ [] 1 ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_entire_collection() {
-        assert_fails!((&[1, 2, 3]).does_not_contain_substring(&[1, 2, 3]),
-            expected it "not to contain the substring <[ 1, 2, 3 ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_entire_collection() {
+        assert_fails!((&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[1, 2, 3]),
+            expected it "not to contain the contiguous subsequence <[ 1, 2, 3 ]>"
             but it "was <[ [1, 2, 3] ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_prefix() {
-        assert_fails!((&[1, 2, 3]).does_not_contain_substring(&[1, 2]),
-            expected it "not to contain the substring <[ 1, 2 ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_prefix() {
+        assert_fails!((&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[1, 2]),
+            expected it "not to contain the contiguous subsequence <[ 1, 2 ]>"
             but it "was <[ [1, 2], 3 ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_suffix() {
-        assert_fails!((&[1, 2, 3]).does_not_contain_substring(&[2, 3]),
-            expected it "not to contain the substring <[ 2, 3 ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_suffix() {
+        assert_fails!((&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[2, 3]),
+            expected it "not to contain the contiguous subsequence <[ 2, 3 ]>"
             but it "was <[ 1, [2, 3] ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_inner_substring() {
-        assert_fails!((&[1, 2, 3, 4, 5]).does_not_contain_substring(&[2, 3, 4]),
-            expected it "not to contain the substring <[ 2, 3, 4 ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_inner_subsequence() {
+        assert_fails!((&[1, 2, 3, 4, 5]).does_not_contain_contiguous_subsequence(&[2, 3, 4]),
+            expected it "not to contain the contiguous subsequence <[ 2, 3, 4 ]>"
             but it "was <[ 1, [2, 3, 4], 5 ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_fails_for_overlapping_occurrences() {
-        assert_fails!((&[1, 2, 1, 2, 1]).does_not_contain_substring(&[1, 2, 1]),
-            expected it "not to contain the substring <[ 1, 2, 1 ]>"
+    fn does_not_contain_contiguous_subsequence_fails_for_overlapping_occurrences() {
+        assert_fails!((&[1, 2, 1, 2, 1]).does_not_contain_contiguous_subsequence(&[1, 2, 1]),
+            expected it "not to contain the contiguous subsequence <[ 1, 2, 1 ]>"
             but it "was <[ [1, 2, 1], 2, 1 ]>");
     }
 
     #[test]
-    fn does_not_contain_substring_passes_for_non_contained_element() {
-        assert_that!(&[1, 2, 3]).does_not_contain_substring(&[4]);
+    fn does_not_contain_contiguous_subsequence_passes_for_non_contained_element() {
+        assert_that!(&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[4]);
     }
 
     #[test]
-    fn does_not_contain_substring_passes_for_almost_completely_contained_substring() {
-        assert_that!(&[1, 2, 1, 2]).does_not_contain_substring(&[2, 1, 1]);
+    fn does_not_contain_contiguous_subsequence_passes_for_almost_completely_contained_subsequence()
+    {
+        assert_that!(&[1, 2, 1, 2]).does_not_contain_contiguous_subsequence(&[2, 1, 1]);
     }
 
     #[test]
-    fn does_not_contain_substring_passes_for_subsequence_that_is_not_substring() {
-        assert_that!(&[1, 2, 3]).does_not_contain_substring(&[1, 3]);
+    fn does_not_contain_contiguous_subsequence_passes_for_subsequence_that_is_not_subsequence() {
+        assert_that!(&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[1, 3]);
     }
 
     #[test]
@@ -831,7 +832,7 @@ mod tests {
     }
 
     #[test]
-    fn contains_subsequence_passes_for_substring() {
+    fn contains_subsequence_passes_for_contiguous_subsequence() {
         assert_that!(&[1, 2, 3, 4, 5]).contains_subsequence(&[2, 3, 4]);
     }
 
@@ -879,7 +880,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_contain_subsequence_fails_for_substring() {
+    fn does_not_contain_subsequence_fails_for_contiguous_subsequence() {
         assert_fails!((&[1, 2, 3, 4, 5]).does_not_contain_subsequence(&[2, 3, 4]),
             expected it "not to contain the subsequence <[ 2, 3, 4 ]>"
             but it "was <[ 1, [2, 3, 4], 5 ]>");
@@ -915,7 +916,7 @@ mod tests {
     }
 
     #[test]
-    fn starts_with_fails_for_non_prefix_substring() {
+    fn starts_with_fails_for_non_prefix_contiguous_subsequence() {
         assert_fails!((&[1, 2, 3]).starts_with(&[2, 3]),
             expected it "to start with the prefix <[ 2, 3 ]>"
             but it "was <[ 1, 2, 3 ]>");
@@ -941,7 +942,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_start_with_passes_for_non_prefix_substring() {
+    fn does_not_start_with_passes_for_non_prefix_contiguous_subsequence() {
         assert_that!(&[1, 2, 3]).does_not_start_with(&[2, 3]);
     }
 
@@ -999,7 +1000,7 @@ mod tests {
     }
 
     #[test]
-    fn ends_with_fails_for_non_suffix_substring() {
+    fn ends_with_fails_for_non_suffix_contiguous_subsequence() {
         assert_fails!((&[1, 2, 3]).ends_with(&[1, 2]),
             expected it "to end with the suffix <[ 1, 2 ]>"
             but it "was <[ 1, 2, 3 ]>");
@@ -1025,7 +1026,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_end_with_passes_for_non_suffix_substring() {
+    fn does_not_end_with_passes_for_non_suffix_contiguous_subsequence() {
         assert_that!(&[1, 2, 3]).does_not_end_with(&[1, 2]);
     }
 
