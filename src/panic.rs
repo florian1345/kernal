@@ -67,7 +67,7 @@ where
 
     match catch_unwind(assert_that.data).map_err(to_message) {
         Ok(_) => failure.but_it("did not panic").fail(),
-        Err(None) => failure.but_it("panicked without decodable message").fail(),
+        Err(None) => failure.but_it("panicked with non-string message").fail(),
         Err(Some(msg)) if !predicate(&msg) =>
             failure.but_it(format!("panicked with message <{}>", &msg)).fail(),
         _ => { }
@@ -127,6 +127,8 @@ mod tests {
 
     use super::*;
 
+    use std::panic;
+
     #[test]
     fn panics_passes_with_panicking_function() {
         assert_that!(|| panic!("hello")).panics();
@@ -151,6 +153,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "expected: <|| panic::panic_any(1)> not to panic\nbut:      it \
+        panicked")]
+    fn does_not_panic_fails_with_panicking_function_with_non_string_message() {
+        assert_that!(|| panic::panic_any(1)).does_not_panic();
+    }
+
+    #[test]
     fn panics_with_message_passes_with_panicking_function_and_correct_message() {
         assert_that!(|| panic!("hello")).panics_with_message("hello");
     }
@@ -167,6 +176,13 @@ mod tests {
         not panic")]
     fn panics_with_message_fails_with_non_panicking_function() {
         assert_that!(|| 1).panics_with_message("hello");
+    }
+
+    #[test]
+    #[should_panic(expected = "expected: <|| panic::panic_any(1)> to panic with message \
+        <hello>\nbut:      it panicked with non-string message")]
+    fn panics_with_message_fails_with_panicking_function_with_non_string_message() {
+        assert_that!(|| panic::panic_any(1)).panics_with_message("hello");
     }
 
     #[test]
@@ -194,6 +210,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "expected: <|| panic::panic_any(1)> to panic with message containing \
+        <a>\nbut:      it panicked with non-string message")]
+    fn panics_with_message_containing_fails_with_panicking_function_with_non_string_message() {
+        assert_that!(|| panic::panic_any(1)).panics_with_message_containing("a");
+    }
+
+    #[test]
     fn panics_with_message_matching_passes_with_message_matching_predicate() {
         assert_that!(|| panic!("hello")).panics_with_message_matching(|m| m.len() == 5);
     }
@@ -210,5 +233,12 @@ mod tests {
         predicate\nbut:      it panicked with message <hello!>")]
     fn panics_with_message_matching_fails_with_message_not_matching_predicate() {
         assert_that!(|| panic!("hello!")).panics_with_message_matching(|m| m.len() == 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "expected: <|| panic::panic_any(1)> to panic with message matching \
+        predicate\nbut:      it panicked with non-string message")]
+    fn panics_with_message_matching_fails_with_panicking_function_with_non_string_message() {
+        assert_that!(|| panic::panic_any(1)).panics_with_message_matching(|m| m.len() == 5);
     }
 }
