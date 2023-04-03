@@ -1,10 +1,12 @@
+# Kernal
+
 Kernal (Kernal Extensive Rust Natural Assertion Language) allows you to use fluent assertions in
 Rust tests. That is, instead of writing `assert_eq!(my_vec.len(), 10)`, you can write
 `assert_that!(my_vec).has_length(10)`, making your tests more readable and enabling the framework to
 provide more expressive error messages. Kernal aims to provide specialized assertions for as many
 commonly tested properties as possible.
 
-# Writing an assertion
+## Writing an assertion
 
 To write an assertion over a value, start with `assert_that!(<your value>)`, which gives you an
 instance on which you can call associated functions to make your assertions. Import the specialized
@@ -17,7 +19,7 @@ use kernal::prelude::*;
 assert_that!("hello world").contains("world");
 ```
 
-# Chaining
+## Chaining
 
 Every assertion returns the same asserter instance to continue writing assertions on the same value.
 In addition, some extension traits define mapping methods that manipulate the data in some way and
@@ -31,7 +33,7 @@ assert_that!("almost")
     .is_sorted_in_strictly_ascending_order();
 ```
 
-# Creating custom assertions
+## Creating custom assertions
 
 Kernal allows the creation of custom assertions to test instances of your types in a more natural
 way. This is achieved by grouping assertions you want to offer for specific types into traits, which
@@ -71,7 +73,7 @@ impl Vector2f32Assertions for AssertThat<Vector2f32> {
 }
 ```
 
-# Links
+## Links
 
 * [Crate](https://crates.io/crates/kernal)
 * [Documentation][Doc]
