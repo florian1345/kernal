@@ -49,15 +49,15 @@ where
         .expected_it(format!("to have the {} <{:?}>", extreme_name, expected_extreme));
 
     match actual_extreme {
-        Some(max) if max == expected_extreme => { },
-        Some(max) => {
+        Some(extreme) if extreme == expected_extreme => { }
+        Some(extreme) => {
             let collection_debug = CollectionDebug { collection: &assert_that.data };
 
             failure
                 .but_it(format!(
-                    "was <{:?}>, which has the {} <{:?}>", collection_debug, extreme_name, max))
+                    "was <{:?}>, which has the {} <{:?}>", collection_debug, extreme_name, extreme))
                 .fail()
-        },
+        }
         None => failure.but_it("was empty").fail()
     }
 }
