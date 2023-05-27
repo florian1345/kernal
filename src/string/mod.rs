@@ -1,7 +1,7 @@
 //! Contains assertions for string values, including among others [String] and references to [str].
 //! See [StringAssertions] for more details.
 
-pub(crate) mod pattern;
+pub mod pattern;
 
 use crate::{AssertThat, Failure};
 
