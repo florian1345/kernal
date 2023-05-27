@@ -1,3 +1,6 @@
+//! Contains assertions for patterns within string values, such as substrings and prefixes.
+//! See [StringPatternAssertions] for more details.
+
 use crate::{AssertThat, Failure};
 
 // TODO use Pattern as soon as it is stable (https://github.com/rust-lang/rust/issues/27721)
