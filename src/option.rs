@@ -69,7 +69,7 @@ impl<T: Debug, O: Borrow<Option<T>>> OptionAssertions<T> for AssertThat<O> {
 
     fn to_value_ref(&self) -> AssertThat<&T> {
         match self.data.borrow() {
-            None => fail_expected_it_to_be_some(&self),
+            None => fail_expected_it_to_be_some(self),
             Some(data) => to_value_assert_that(data, &self.expression)
         }
     }
