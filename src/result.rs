@@ -91,7 +91,7 @@ where
     where
         E: 'reference
     {
-        assert_is_ok(&self);
+        assert_is_ok(self);
 
         AssertThat {
             data: self.data.borrow().as_ref().unwrap(),
@@ -103,7 +103,7 @@ where
     where
         V: 'reference
     {
-        assert_is_err(&self);
+        assert_is_err(self);
 
         AssertThat {
             data: self.data.borrow().as_ref().unwrap_err(),
