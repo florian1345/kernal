@@ -8,14 +8,14 @@ use std::fmt::Debug;
 use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with [Option]
-/// argument.
+/// argument. All assertions here work for references to [Option]s as well.
 ///
 /// Examples:
 ///
 /// ```
 /// use kernal::prelude::*;
 ///
-/// assert_that!(Some(2 + 3)).is_some().to_value().is_equal_to(5);
+/// assert_that!(Some(2 + 3)).is_some().to_value_ref().is_equal_to(&5);
 /// assert_that!(None::<u32>).is_none();
 /// ```
 pub trait OptionAssertions<T> {
@@ -27,16 +27,30 @@ pub trait OptionAssertions<T> {
     /// Asserts that the tested option is a `None` variant, i.e. that [Option::is_none] is `true`.
     fn is_none(self) -> Self;
 
-    /// Asserts that the tested option is a `Some` variant and converts this asserter to one for the
-    /// contained value, so chained assertions can be run on the unwrapped value.
-    fn to_value(self) -> AssertThat<T>;
+    /// Asserts that the tested option is a `Some` variant and converts this asserter to one for a
+    /// reference to the contained value, so chained assertions can be run on the unwrapped value.
+    ///
+    /// If you are asserting over an owned `Option`, use [OwnedOptionAssertions::to_value] to obtain
+    /// an asserter over the owned value.
+    fn to_value_ref(&self) -> AssertThat<&T>;
 }
 
-impl<T: Debug> OptionAssertions<T> for AssertThat<Option<T>> {
+fn fail_expected_it_to_be_some<T>(assert_that: &AssertThat<T>) -> ! {
+    Failure::new(assert_that).expected_it("to be <Some(_)>").but_it("was <None>").fail()
+}
+
+fn to_value_assert_that<T>(data: T, expression: &str) -> AssertThat<T> {
+    AssertThat {
+        data,
+        expression: format!("value of <{}>", expression)
+    }
+}
+
+impl<T: Debug, O: Borrow<Option<T>>> OptionAssertions<T> for AssertThat<O> {
 
     fn is_some(self) -> Self {
-        if self.data.is_none() {
-            Failure::new(&self).expected_it("to be <Some(_)>").but_it("was <None>").fail();
+        if self.data.borrow().is_none() {
+            fail_expected_it_to_be_some(&self);
         }
 
         self
@@ -53,19 +67,43 @@ impl<T: Debug> OptionAssertions<T> for AssertThat<Option<T>> {
         self
     }
 
+    fn to_value_ref(&self) -> AssertThat<&T> {
+        match self.data.borrow() {
+            None => fail_expected_it_to_be_some(self),
+            Some(data) => to_value_assert_that(data, &self.expression)
+        }
+    }
+}
+
+/// An extension trait to be used on the output of [assert_that](crate::assert_that) with owned
+/// [Option] argument.
+///
+/// Examples:
+///
+/// ```
+/// use kernal::prelude::*;
+///
+/// assert_that!(Some(1)).to_value().is_less_than(2);
+/// ```
+pub trait OwnedOptionAssertions<T> {
+
+    /// Asserts that the tested option is a `Some` variant and converts this asserter to one for the
+    /// contained value, so chained assertions can be run on the unwrapped value.
+    fn to_value(self) -> AssertThat<T>;
+}
+
+impl<T> OwnedOptionAssertions<T> for AssertThat<Option<T>> {
     fn to_value(self) -> AssertThat<T> {
         match self.data {
-            None => Failure::new(&self).expected_it("to be <Some(_)>").but_it("was <None>").fail(),
-            Some(data) => AssertThat {
-                data,
-                expression: format!("value of <{}>", self.expression)
-            }
+            None => fail_expected_it_to_be_some(&self),
+            Some(data) => to_value_assert_that(data, &self.expression)
         }
     }
 }
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with [Option]
-/// argument whose value type implements the [PartialEq] trait.
+/// argument whose value type implements the [PartialEq] trait. All assertions here work for
+/// references to [Option]s as well.
 ///
 /// Examples:
 ///
@@ -86,15 +124,15 @@ pub trait OptionPartialEqAssertions<T> {
     fn does_not_contain<E: Borrow<T>>(self, unexpected: E) -> Self;
 }
 
-impl<T: Debug + PartialEq> OptionPartialEqAssertions<T> for AssertThat<Option<T>> {
+impl<T: Debug + PartialEq, O: Borrow<Option<T>>> OptionPartialEqAssertions<T> for AssertThat<O> {
 
     fn contains<E: Borrow<T>>(self, expected: E) -> Self {
         let expected = expected.borrow();
 
-        if !self.data.iter().any(|data| data == expected) {
+        if !self.data.borrow().iter().any(|data| data == expected) {
             Failure::new(&self)
                 .expected_it(format!("to contain <{:?}>", expected))
-                .but_it_was_data(&self)
+                .but_it(format!("was <{:?}>", self.data.borrow()))
                 .fail();
         }
 
@@ -104,10 +142,10 @@ impl<T: Debug + PartialEq> OptionPartialEqAssertions<T> for AssertThat<Option<T>
     fn does_not_contain<E: Borrow<T>>(self, unexpected: E) -> Self {
         let unexpected = unexpected.borrow();
 
-        if self.data.iter().any(|data| data == unexpected) {
+        if self.data.borrow().iter().any(|data| data == unexpected) {
             Failure::new(&self)
                 .expected_it(format!("not to contain <{:?}>", unexpected))
-                .but_it_was_data(&self)
+                .but_it(format!("was <{:?}>", self.data.borrow()))
                 .fail();
         }
 
@@ -144,20 +182,41 @@ mod tests {
     }
 
     #[test]
-    fn to_value_returns_correct_value_for_some() {
-        assert_that!(Some(1 + 1)).to_value().is_equal_to(2);
+    fn to_value_ref_returns_correct_value_for_some() {
+        assert_that!(Some(1 + 1)).to_value_ref().is_equal_to(&2);
     }
 
     #[test]
-    fn to_value_returns_correct_expression_for_some() {
-        let expression = assert_that!(Some(1 + 1)).to_value().expression;
+    fn to_value_ref_returns_correct_expression_for_some() {
+        let expression = assert_that!(Some(1 + 1)).to_value_ref().expression;
 
         assert_that!(expression.as_str()).is_equal_to("value of <Some(1 + 1)>");
     }
 
     #[test]
+    fn to_value_ref_fails_for_none() {
+        assert_fails!((None::<i32>).to_value_ref(),
+            expected it "to be <Some(_)>"
+            but it "was <None>");
+    }
+
+    #[test]
+    fn to_value_returns_correct_value_for_some() {
+        assert_that!(Some(2 + 3)).to_value().is_equal_to(5);
+    }
+
+    #[test]
+    fn to_value_returns_correct_expression_for_some() {
+        let expression = assert_that!(Some(2 + 3)).to_value().expression;
+
+        assert_that!(expression.as_str()).is_equal_to("value of <Some(2 + 3)>");
+    }
+
+    #[test]
     fn to_value_fails_for_none() {
-        assert_fails!((None::<i32>).to_value(), expected it "to be <Some(_)>" but it "was <None>");
+        assert_fails!((None::<i32>).to_value(),
+            expected it "to be <Some(_)>"
+            but it "was <None>");
     }
 
     #[test]
@@ -167,7 +226,7 @@ mod tests {
 
     #[test]
     fn contains_fails_for_some_with_incorrect_value() {
-        assert_fails!((Some("hello")).contains("world"),
+        assert_fails!((&Some("hello")).contains("world"),
             expected it "to contain <\"world\">"
             but it "was <Some(\"hello\")>");
     }
@@ -191,7 +250,7 @@ mod tests {
 
     #[test]
     fn does_not_contain_fails_for_some_with_correct_value() {
-        assert_fails!((Some("hello")).does_not_contain("hello"),
+        assert_fails!((&Some("hello")).does_not_contain("hello"),
             expected it "not to contain <\"hello\">"
             but it "was <Some(\"hello\")>");
     }

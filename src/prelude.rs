@@ -23,7 +23,7 @@ pub use crate::maps::partial_eq::MapPartialEqAssertions;
 pub use crate::num::float::FloatAssertions;
 pub use crate::num::rem::{RemAssertions, MaybeIntegerAssertions, EvennessAssertions};
 pub use crate::num::signed::{SignedAssertions, ZeroableAssertions};
-pub use crate::option::{OptionAssertions, OptionPartialEqAssertions};
+pub use crate::option::{OptionAssertions, OptionPartialEqAssertions, OwnedOptionAssertions};
 pub use crate::panic::PanicAssertions;
 pub use crate::partial_eq::PartialEqAssertions;
 pub use crate::partial_ord::PartialOrdAssertions;
