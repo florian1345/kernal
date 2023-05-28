@@ -3,13 +3,17 @@
 
 use crate::{AssertThat, Failure};
 use crate::collections::CollectionDebug;
+use crate::collections::partial_eq::{
+    compute_missing_and_superfluous,
+    format_error_for_missing_and_superfluous
+};
 use crate::maps::Map;
 use crate::maps::debug::{HighlightedMapDebug, MapDebug, MapEntriesDebug};
 use crate::util::{borrow_all, borrow_all_pairs};
+use crate::util::multiset::Multiset;
 
 use std::borrow::Borrow;
 use std::fmt::Debug;
-use crate::collections::partial_eq::{compute_missing_and_superfluous, format_error_for_missing_and_superfluous};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Map] trait whose [Map::Value] implements [PartialEq] in addition

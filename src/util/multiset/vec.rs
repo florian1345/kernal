@@ -1,43 +1,58 @@
-use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
 use std::fmt;
 
-pub(crate) fn borrow_all<T, B: Borrow<T>>(to_borrow: &[B]) -> Vec<&T> {
-    to_borrow.iter().map(|b| b.borrow()).collect()
+use crate::util::multiset::Multiset;
+
+pub(crate) struct VecMultisetIter<'set, T> {
+    set: &'set VecMultiset<T>,
+    index: usize
 }
 
-pub(crate) fn borrow_all_pairs<L, R, LB, RB>(to_borrow: &[(LB, RB)]) -> Vec<(&L, &R)>
-where
-    LB: Borrow<L>,
-    RB: Borrow<R>
-{
-    to_borrow.iter().map(|(l, r)| (l.borrow(), r.borrow())).collect()
+impl<'set, T> Iterator for VecMultisetIter<'set, T> {
+    type Item = (&'set T, usize);
+
+    fn next(&mut self) -> Option<(&'set T, usize)> {
+        match self.set.entries.get(self.index) {
+            Some((entry, multiplicity)) => {
+                self.index += 1;
+                Some((entry, *multiplicity))
+            },
+            None => None
+        }
+    }
 }
 
 pub(crate) struct VecMultiset<T> {
     entries: Vec<(T, usize)>
 }
 
-impl<T> VecMultiset<T> {
-    pub(crate) fn new() -> VecMultiset<T> {
+impl<T: Debug + PartialEq> Multiset<T> for VecMultiset<T> {
+    type Iter<'iter> = VecMultisetIter<'iter, T>
+    where
+        T: 'iter,
+        Self: 'iter;
+
+    fn new() -> VecMultiset<T> {
         VecMultiset {
             entries: Vec::new()
         }
     }
-}
 
-impl<T> VecMultiset<T> {
-    pub(crate) fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&T, usize)> {
-        self.entries.iter().map(|(item, amount)| (item, *amount))
+    fn iter<'reference>(&'reference self) -> Self::Iter<'reference>
+    where
+        T: 'reference
+    {
+        VecMultisetIter {
+            set: self,
+            index: 0
+        }
     }
-}
 
-impl<T: PartialEq> VecMultiset<T> {
-    pub(crate) fn add(&mut self, item: T) {
+    fn add(&mut self, item: T) {
         for (contained_item, amount) in &mut self.entries {
             if contained_item == &item {
                 *amount += 1;
@@ -48,7 +63,7 @@ impl<T: PartialEq> VecMultiset<T> {
         self.entries.push((item, 1));
     }
 
-    pub(crate) fn remove(&mut self, item: &T) -> bool {
+    fn remove(&mut self, item: &T) -> bool {
         for (index, (contained_item, amount)) in self.entries.iter_mut().enumerate() {
             if contained_item == item {
                 *amount -= 1;
@@ -65,7 +80,7 @@ impl<T: PartialEq> VecMultiset<T> {
     }
 }
 
-impl<T: PartialEq> FromIterator<T> for VecMultiset<T> {
+impl<T: Debug + PartialEq> FromIterator<T> for VecMultiset<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut multiset = VecMultiset::new();
 
@@ -77,7 +92,7 @@ impl<T: PartialEq> FromIterator<T> for VecMultiset<T> {
     }
 }
 
-impl<T: Debug> Debug for VecMultiset<T> {
+impl<T: Debug + PartialEq> Debug for VecMultiset<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (index, (item, amount)) in self.iter().enumerate() {
             if index > 0 {
@@ -94,7 +109,8 @@ impl<T: Debug> Debug for VecMultiset<T> {
 #[cfg(test)]
 mod tests {
 
-    use crate::util::VecMultiset;
+    use crate::util::multiset::Multiset;
+    use crate::util::multiset::vec::VecMultiset;
 
     #[test]
     fn new_vec_multiset_is_empty() {
