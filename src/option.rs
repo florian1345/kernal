@@ -15,7 +15,7 @@ use crate::{AssertThat, Failure};
 /// ```
 /// use kernal::prelude::*;
 ///
-/// assert_that!(Some(2 + 3)).is_some().to_value_ref().is_equal_to(5);
+/// assert_that!(Some(2 + 3)).is_some().to_value_ref().is_equal_to(&5);
 /// assert_that!(None::<u32>).is_none();
 /// ```
 pub trait OptionAssertions<T> {
