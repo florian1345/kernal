@@ -9,9 +9,10 @@ use std::ops::Range;
 
 use crate::{AssertThat, Failure};
 use crate::collections::{assert_all_match_predicate, Collection, CollectionDebug, HighlightedCollectionDebug};
-use crate::util::VecMultiset;
+use crate::util::multiset::vec::VecMultiset;
 use crate::collections::ordered::OrderedCollection;
 use crate::util::borrow_all;
+use crate::util::multiset::Multiset;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Collection] trait where the [Collection::Item] type implements
@@ -58,7 +59,7 @@ where
 pub(crate) fn compute_missing_and_superfluous<'item, T, I>(actual_items: I,
     expected_items: &'item [&T]) -> (VecMultiset<&'item T>, VecMultiset<&'item T>)
 where
-    T: PartialEq + 'item,
+    T: Debug + PartialEq + 'item,
     I: Iterator<Item = &'item T>
 {
     let expected_items: Vec<&T> = borrow_all(expected_items);
@@ -77,7 +78,7 @@ where
 pub(crate) fn format_error_for_missing_and_superfluous<T>(missing_items: &VecMultiset<T>,
     superfluous_items: &VecMultiset<T>) -> String
 where
-    T: Debug
+    T: Debug + PartialEq
 {
     let mut errors = Vec::new();
 
