@@ -1,11 +1,12 @@
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Formatter};
 
+pub(crate) mod hash;
 pub(crate) mod vec;
 
 /// A trait for multisets, which are unordered collections that can contain elements multiple times.
 /// Equality of elements is defined via the [PartialEq] trait. Multiplicities are the cardinalities
 /// of the [PartialEq]-equivalence classes. Implementations of this trait may use other traits (such
-/// as [Hash](std::hash::Hash) or [Ord]) to make lookups faster.
+/// as [Hash](hash::Hash) or [Ord]) to make lookups faster.
 pub(crate) trait Multiset<T> : Debug + FromIterator<T> {
 
     /// The type of iterator used by this multiset. It iterates over pairs whose left element is a
@@ -41,4 +42,124 @@ pub(crate) trait Multiset<T> : Debug + FromIterator<T> {
     ///
     /// Returns `true` if an equal element was found, otherwise returns `false` and does nothing.
     fn remove(&mut self, item: &T) -> bool;
+}
+
+fn fmt_multiset_debug<T, M>(multiset: &M, f: &mut Formatter<'_>) -> fmt::Result
+where
+    T: Debug + PartialEq,
+    M: Multiset<T>
+{
+    for (index, (item, amount)) in multiset.iter().enumerate() {
+        if index > 0 {
+            write!(f, ", ")?;
+        }
+
+        write!(f, "{} of <{:?}>", amount, item)?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[macro_export]
+    macro_rules! test_multiset_impl {
+        ($multiset_type:ident) => {
+            use std::collections::HashSet;
+
+            #[test]
+            fn new_multiset_is_empty() {
+                assert!($multiset_type::<String>::new().is_empty());
+                assert!($multiset_type::<u32>::new().iter().next().is_none());
+            }
+
+            #[test]
+            fn multiset_with_single_entry_is_not_empty() {
+                let mut set = $multiset_type::new();
+                set.add(1);
+
+                assert!(!set.is_empty());
+            }
+
+            #[test]
+            fn multiset_with_twice_the_same_element_collapses_to_single_entry() {
+                let mut set = $multiset_type::new();
+                set.add("hello");
+                set.add("hello");
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert_eq!(HashSet::from([(&"hello", 2)]), entries);
+            }
+
+            #[test]
+            fn multiset_collapses_with_later_element() {
+                let mut set = $multiset_type::new();
+                set.add("hello");
+                set.add("world");
+                set.add("world");
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert_eq!(HashSet::from([(&"hello", 1), (&"world", 2)]), entries);
+            }
+
+            #[test]
+            fn multiset_converted_correctly_from_iterator() {
+                let set: $multiset_type<u32> = [1, 2, 3, 2, 4, 2, 3].into_iter().collect();
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert_eq!(HashSet::from([(&1, 1), (&2, 3), (&3, 2), (&4, 1)]), entries);
+            }
+
+            #[test]
+            fn multiset_decreases_amount_when_removing_first_element() {
+                let mut set: $multiset_type<u32> = [1, 1, 2, 3].into_iter().collect();
+                let remove_result = set.remove(&1);
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert!(remove_result);
+                assert_eq!(HashSet::from([(&1, 1), (&2, 1), (&3, 1)]), entries);
+            }
+
+            #[test]
+            fn multiset_removes_entry_when_removing_element_first_element() {
+                let mut set: $multiset_type<u32> = [1, 2, 2].into_iter().collect();
+                let remove_result = set.remove(&1);
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert!(remove_result);
+                assert_eq!(HashSet::from([(&2, 2)]), entries);
+            }
+
+            #[test]
+            fn multiset_decreases_amount_when_removing_later_element() {
+                let mut set: $multiset_type<u32> = [1, 2, 2, 2].into_iter().collect();
+                let remove_result = set.remove(&2);
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert!(remove_result);
+                assert_eq!(HashSet::from([(&1, 1), (&2, 2)]), entries);
+            }
+
+            #[test]
+            fn multiset_removes_entry_when_removing_element_later_element() {
+                let mut set: $multiset_type<u32> = [1, 1, 2, 3].into_iter().collect();
+                let remove_result = set.remove(&3);
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert!(remove_result);
+                assert_eq!(HashSet::from([(&1, 2), (&2, 1)]), entries);
+            }
+
+            #[test]
+            fn multiset_returns_false_and_maintains_content_when_removing_element_not_contained() {
+                let mut set: $multiset_type<u32> = [2, 3, 4].into_iter().collect();
+                let remove_result = set.remove(&1);
+                let entries = set.iter().collect::<HashSet<_>>();
+
+                assert!(!remove_result);
+                assert_eq!(HashSet::from([(&2, 1), (&3, 1), (&4, 1)]), entries);
+            }
+        }
+    }
 }
