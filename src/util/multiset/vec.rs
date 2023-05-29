@@ -1,17 +1,17 @@
 use std::fmt::{Debug, Formatter};
 use std::fmt;
 
-use crate::util::multiset::Multiset;
+use crate::util::multiset::{self, Multiset};
 
-pub(crate) struct VecMultisetIter<'set, T> {
-    set: &'set VecMultiset<T>,
+pub(crate) struct VecMultisetIter<'iter, T> {
+    set: &'iter VecMultiset<T>,
     index: usize
 }
 
-impl<'set, T> Iterator for VecMultisetIter<'set, T> {
-    type Item = (&'set T, usize);
+impl<'iter, T> Iterator for VecMultisetIter<'iter, T> {
+    type Item = (&'iter T, usize);
 
-    fn next(&mut self) -> Option<(&'set T, usize)> {
+    fn next(&mut self) -> Option<(&'iter T, usize)> {
         match self.set.entries.get(self.index) {
             Some((entry, multiplicity)) => {
                 self.index += 1;
@@ -94,82 +94,16 @@ impl<T: Debug + PartialEq> FromIterator<T> for VecMultiset<T> {
 
 impl<T: Debug + PartialEq> Debug for VecMultiset<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for (index, (item, amount)) in self.iter().enumerate() {
-            if index > 0 {
-                write!(f, ", ")?;
-            }
-
-            write!(f, "{} of <{:?}>", amount, item)?;
-        }
-
-        Ok(())
+        multiset::fmt_multiset_debug(self, f)
     }
 }
 
 #[cfg(test)]
 mod tests {
 
+    use crate::test_multiset_impl;
     use crate::util::multiset::Multiset;
     use crate::util::multiset::vec::VecMultiset;
 
-    #[test]
-    fn new_vec_multiset_is_empty() {
-        assert!(VecMultiset::<String>::new().is_empty());
-        assert!(VecMultiset::<u32>::new().iter().next().is_none());
-    }
-
-    #[test]
-    fn vec_multiset_with_single_entry_is_not_empty() {
-        let mut set = VecMultiset::new();
-        set.add(1);
-
-        assert!(!set.is_empty());
-    }
-
-    #[test]
-    fn vec_multiset_with_twice_the_same_element_collapses_to_single_entry() {
-        let mut set = VecMultiset::new();
-        set.add("hello");
-        set.add("hello");
-        let entries = set.iter().collect::<Vec<_>>();
-
-        assert_eq!(&[(&"hello", 2)], entries.as_slice());
-    }
-
-    #[test]
-    fn vec_multiset_collapses_with_later_element() {
-        let mut set = VecMultiset::new();
-        set.add("hello");
-        set.add("world");
-        set.add("world");
-        let entries = set.iter().collect::<Vec<_>>();
-
-        assert_eq!(&[(&"hello", 1), (&"world", 2)], entries.as_slice());
-    }
-
-    #[test]
-    fn vec_multiset_converted_correctly_from_iterator() {
-        let set: VecMultiset<u32> = [1, 2, 3, 2, 4, 2, 3].into_iter().collect();
-        let entries = set.iter().collect::<Vec<_>>();
-
-        assert_eq!(&[(&1, 1), (&2, 3), (&3, 2), (&4, 1)], entries.as_slice());
-    }
-
-    #[test]
-    fn vec_multiset_decreases_amount_when_removing_element_contained_multiple_times() {
-        let mut set: VecMultiset<u32> = [1, 2, 2, 3].into_iter().collect();
-        set.remove(&2);
-        let entries = set.iter().collect::<Vec<_>>();
-
-        assert_eq!(&[(&1, 1), (&2, 1), (&3, 1)], entries.as_slice());
-    }
-
-    #[test]
-    fn vec_multiset_removes_entry_when_removing_element_contained_once() {
-        let mut set: VecMultiset<u32> = [1, 2, 2].into_iter().collect();
-        set.remove(&1);
-        let entries = set.iter().collect::<Vec<_>>();
-
-        assert_eq!(&[(&2, 2)], entries.as_slice());
-    }
+    test_multiset_impl!(VecMultiset);
 }
