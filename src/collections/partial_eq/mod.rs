@@ -8,11 +8,18 @@ use std::fmt::Debug;
 use std::ops::Range;
 
 use crate::{AssertThat, Failure};
-use crate::collections::{assert_all_match_predicate, Collection, CollectionDebug, HighlightedCollectionDebug};
+use crate::collections::{
+    assert_all_match_predicate,
+    Collection,
+    CollectionDebug,
+    HighlightedCollectionDebug
+};
 use crate::util::multiset::vec::VecMultiset;
 use crate::collections::ordered::OrderedCollection;
-use crate::util::borrow_all;
+use crate::util::{borrow_all, Set};
 use crate::util::multiset::Multiset;
+
+pub mod hash;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Collection] trait where the [Collection::Item] type implements
@@ -56,15 +63,16 @@ where
         I: IntoIterator<Item = E>;
 }
 
-pub(crate) fn compute_missing_and_superfluous<'item, T, I>(actual_items: I,
-    expected_items: &'item [&T]) -> (VecMultiset<&'item T>, VecMultiset<&'item T>)
+pub(crate) fn compute_missing_and_superfluous<'item, T, M, I>(actual_items: I,
+    expected_items: &'item [&T]) -> (M, M)
 where
-    T: Debug + PartialEq + 'item,
+    T: Debug + 'item,
+    M: Multiset<&'item T>,
     I: Iterator<Item = &'item T>
 {
     let expected_items: Vec<&T> = borrow_all(expected_items);
-    let mut missing_multiset = expected_items.iter().cloned().collect::<VecMultiset<_>>();
-    let mut superfluous_multiset: VecMultiset<&T> = VecMultiset::new();
+    let mut missing_multiset = expected_items.iter().cloned().collect::<M>();
+    let mut superfluous_multiset = M::new();
 
     for item in actual_items {
         if !missing_multiset.remove(&item) {
@@ -75,10 +83,11 @@ where
     (missing_multiset, superfluous_multiset)
 }
 
-pub(crate) fn format_error_for_missing_and_superfluous<T>(missing_items: &VecMultiset<T>,
-    superfluous_items: &VecMultiset<T>) -> String
+pub(crate) fn format_error_for_missing_and_superfluous<T, M>(missing_items: &M,
+    superfluous_items: &M) -> String
 where
-    T: Debug + PartialEq
+    T: Debug,
+    M: Multiset<T>
 {
     let mut errors = Vec::new();
 
@@ -91,6 +100,78 @@ where
     }
 
     errors.join(" and ")
+}
+
+pub(crate) fn check_contains_all_of<'collection, 'item, C, I, M>(
+    assert_that: &AssertThat<C>, actual_items: I, expected_items: &'item [&C::Item])
+where
+    C: Collection<'collection>,
+    C::Item: Debug + 'item,
+    I: Iterator<Item = &'item C::Item>,
+    M: Multiset<&'item C::Item>
+{
+    let (missing_multiset, _) =
+        compute_missing_and_superfluous::<_, M, _>(
+            actual_items, expected_items);
+
+    if !missing_multiset.is_empty() {
+        let expected_items_debug = CollectionDebug { collection: &expected_items };
+        let collection_debug = CollectionDebug { collection: &assert_that.data };
+
+        Failure::new(assert_that)
+            .expected_it(format!("to contain all of <{:?}>", expected_items_debug))
+            .but_it(format!("was <{:?}>, which lacks {:?}",
+                collection_debug, &missing_multiset))
+            .fail();
+    }
+}
+
+pub(crate) fn check_contains_none_of<'collection, 'item, C, I, S>(
+    assert_that: &AssertThat<C>, actual_items: I, unexpected_items: Vec<&'item C::Item>)
+where
+    C: Collection<'collection>,
+    C::Item: Debug + 'item,
+    I: Iterator<Item = &'item C::Item>,
+    S: Set<&'item C::Item>
+{
+    let unexpected_items_set = S::from_iter(unexpected_items.iter().cloned());
+
+    for (index, item) in actual_items.enumerate() {
+        if unexpected_items_set.contains(&item) {
+            let unexpected_items_debug = CollectionDebug { collection: &unexpected_items };
+
+            Failure::new(assert_that)
+                .expected_it(format!("not to contain any of <{:?}>", unexpected_items_debug))
+                .but_it(format!("was <{:?}>",
+                    HighlightedCollectionDebug::with_single_highlighted_element(
+                        &assert_that.data, index)))
+                .fail();
+        }
+    }
+}
+
+pub(crate) fn check_contains_exactly_in_any_order<'collection, 'item, C, I, M>(
+    assert_that: &AssertThat<C>, actual_items: I, expected_items: &'item [&C::Item])
+where
+    C: Collection<'collection>,
+    C::Item: Debug + 'item,
+    I: Iterator<Item = &'item C::Item>,
+    M: Multiset<&'item C::Item>
+{
+    let (missing_multiset, superfluous_multiset) =
+        compute_missing_and_superfluous::<_, M, _>(actual_items, expected_items);
+
+    if !missing_multiset.is_empty() || !superfluous_multiset.is_empty() {
+        let expected_items_debug = CollectionDebug { collection: &expected_items };
+        let collection_debug = CollectionDebug { collection: &assert_that.data };
+        let error =
+            format_error_for_missing_and_superfluous(&missing_multiset, &superfluous_multiset);
+
+        Failure::new(assert_that)
+            .expected_it(format!("to contain exactly in any order <{:?}>", expected_items_debug))
+            .but_it(format!("was <{:?}>, which {}", collection_debug, error))
+            .fail();
+    }
 }
 
 impl<'collection, C> CollectionPartialEqAssertions<'collection, C> for AssertThat<C>
@@ -121,39 +202,17 @@ where
     fn contains_all_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
-        let (missing_multiset, _) =
-            compute_missing_and_superfluous(self.data.iterator(), &expected_items);
 
-        if !missing_multiset.is_empty() {
-            let expected_items_debug = CollectionDebug { collection: &expected_items };
-            let collection_debug = CollectionDebug { collection: &self.data };
-
-            Failure::new(&self)
-                .expected_it(format!("to contain all of <{:?}>", expected_items_debug))
-                .but_it(format!("was <{:?}>, which lacks {:?}",
-                    collection_debug, &missing_multiset))
-                .fail();
-        }
+        check_contains_all_of::<_, _, VecMultiset<_>>(&self, self.data.iterator(), &expected_items);
 
         self
     }
 
     fn contains_none_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self {
-        let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
-        let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
+        let unexpected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
+        let unexpected_items: Vec<&C::Item> = borrow_all(&unexpected_items_unborrowed);
 
-        for (index, item) in self.data.iterator().enumerate() {
-            if expected_items.contains(&item) {
-                let expected_items_debug = CollectionDebug { collection: &expected_items };
-
-                Failure::new(&self)
-                    .expected_it(format!("not to contain any of <{:?}>", expected_items_debug))
-                    .but_it(format!("was <{:?}>",
-                        HighlightedCollectionDebug::with_single_highlighted_element(
-                            &self.data, index)))
-                    .fail();
-            }
-        }
+        check_contains_none_of::<_, _, Vec<_>>(&self, self.data.iterator(), unexpected_items);
 
         self
     }
@@ -165,20 +224,9 @@ where
     {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
-        let (missing_multiset, superfluous_multiset) =
-            compute_missing_and_superfluous(self.data.iterator(), &expected_items);
 
-        if !missing_multiset.is_empty() || !superfluous_multiset.is_empty() {
-            let expected_items_debug = CollectionDebug { collection: &expected_items };
-            let collection_debug = CollectionDebug { collection: &self.data };
-            let error =
-                format_error_for_missing_and_superfluous(&missing_multiset, &superfluous_multiset);
-
-            Failure::new(&self)
-                .expected_it(format!("to contain exactly in any order <{:?}>", expected_items_debug))
-                .but_it(format!("was <{:?}>, which {}", collection_debug, error))
-                .fail();
-        }
+        check_contains_exactly_in_any_order::<_, _, VecMultiset<_>>(
+            &self, self.data.iterator(), &expected_items);
 
         self
     }
@@ -393,7 +441,7 @@ where
     let subsequence_of_kind_vec: Vec<&C::Item> = borrow_all(&subsequence_of_kind_vec_unborrowed);
 
     if let Some(first_occurrence_ranges) =
-            find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec) {
+        find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec) {
         let subsequence_of_kind_debug = CollectionDebug { collection: &subsequence_of_kind_vec };
         let collection_debug = HighlightedCollectionDebug {
             collection: &assert_that.data,
@@ -524,7 +572,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_fails, assert_that};
+    use crate::assert_fails;
+    use crate::prelude::*;
 
     use super::*;
 
@@ -588,130 +637,156 @@ mod tests {
             but it "was <[ 2, 3, [5] ]>");
     }
 
-    #[test]
-    fn contains_all_of_passes_for_empty_expected_items() {
-        assert_that!(Vec::<u32>::new()).contains_all_of(&[]);
+    #[macro_export]
+    macro_rules! test_contains_all_of {
+        ($assertion:ident) => {
+            #[test]
+            fn contains_all_of_passes_for_empty_expected_items() {
+                assert_that!(Vec::<u32>::new()).$assertion(&[]);
+            }
+
+            #[test]
+            fn contains_all_of_passes_for_same_slices() {
+                assert_that!(&[1, 2, 3]).$assertion(&[1, 2, 3]);
+            }
+
+            #[test]
+            fn contains_all_of_passes_for_same_slices_in_different_order() {
+                assert_that!(&[1, 2, 3]).$assertion(&[3, 2, 1]);
+            }
+
+            #[test]
+            fn contains_all_of_passes_for_true_sub_multiset() {
+                assert_that!(&[1, 2, 3]).$assertion(&[1, 3]);
+            }
+
+            #[test]
+            fn contains_all_of_fails_for_single_non_contained_item() {
+                assert_fails!((&[1, 2, 3]).$assertion(&[4]),
+                    expected it "to contain all of <[ 4 ]>"
+                    but it "was <[ 1, 2, 3 ]>, which lacks 1 of <4>");
+            }
+
+            #[test]
+            fn contains_all_of_fails_for_more_often_contained_item() {
+                assert_fails!((&[1, 2, 3]).$assertion(&[1, 2, 2, 2]),
+                    expected it "to contain all of <[ 1, 2, 2, 2 ]>"
+                    but it "was <[ 1, 2, 3 ]>, which lacks 2 of <2>");
+            }
+
+            #[test]
+            fn contains_all_of_fails_for_multiple_non_contained_items() {
+                assert_that!(|| assert_that!(&[1, 2, 3]).$assertion(&[1, 1, 4, 4, 5]))
+                    .panics_with_message_matching(|msg|
+                        msg.contains("to contain all of <[ 1, 1, 4, 4, 5 ]>") &&
+                        msg.contains("was <[ 1, 2, 3 ]>, which lacks") &&
+                        msg.contains("1 of <1>") &&
+                        msg.contains("2 of <4>") &&
+                        msg.contains("1 of <5>"));
+            }
+        }
     }
 
-    #[test]
-    fn contains_all_of_passes_for_same_slices() {
-        assert_that!(&[1, 2, 3]).contains_all_of(&[1, 2, 3]);
+    test_contains_all_of!(contains_all_of);
+
+    #[macro_export]
+    macro_rules! test_contains_none_of {
+        ($assertion:ident) => {
+            #[test]
+            fn contains_none_of_passes_for_empty_expected_items() {
+                assert_that!(&["apple"]).$assertion(&[] as &[&str]);
+            }
+
+            #[test]
+            fn contains_none_of_passes_for_single_non_contained_item() {
+                assert_that!(&["apple", "banana"]).$assertion(&["cherry"]);
+            }
+
+            #[test]
+            fn contains_none_of_passes_for_multiple_non_contained_items() {
+                assert_that!(&["apple", "banana"]).$assertion(&["cherry", "dragon fruit"]);
+            }
+
+            #[test]
+            fn contains_none_of_fails_for_single_contained_element() {
+                assert_fails!((&["apple", "banana", "cherry"]).$assertion(&["banana"]),
+                    expected it "not to contain any of <[ \"banana\" ]>"
+                    but it "was <[ \"apple\", [\"banana\"], \"cherry\" ]>");
+            }
+
+            #[test]
+            fn contains_none_of_fails_for_mixed_elements() {
+                assert_fails!((&["apple", "banana", "cherry"])
+                    .$assertion(&["dragon fruit", "apple"]),
+                    expected it "not to contain any of <[ \"dragon fruit\", \"apple\" ]>"
+                    but it "was <[ [\"apple\"], \"banana\", \"cherry\" ]>");
+            }
+        }
     }
 
-    #[test]
-    fn contains_all_of_passes_for_same_slices_in_different_order() {
-        assert_that!(&[1, 2, 3]).contains_all_of(&[3, 2, 1]);
+    test_contains_none_of!(contains_none_of);
+
+    #[macro_export]
+    macro_rules! test_contains_exactly_in_any_order {
+        ($assertion:ident) => {
+            #[test]
+            fn contains_exactly_in_any_order_passes_for_empty_slices() {
+                assert_that!(&[] as &[&str]).$assertion(&[] as &[&str]);
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_passes_for_slices_with_single_element() {
+                assert_that!(&[1]).$assertion(&[1]);
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_passes_for_same_elements_in_different_order() {
+                assert_that!(&[1, 2, 3]).$assertion(&[2, 3, 1]);
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_passes_for_correct_multiplicity() {
+                assert_that!(&[2, 1, 2]).$assertion(&[1, 2, 2]);
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_fails_for_missing_element() {
+                assert_fails!((&[1]).$assertion(&[1, 2]),
+                    expected it "to contain exactly in any order <[ 1, 2 ]>"
+                    but it "was <[ 1 ]>, which lacks 1 of <2>");
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_fails_for_superfluous_element() {
+                assert_fails!((&[1, 2]).$assertion(&[2]),
+                    expected it "to contain exactly in any order <[ 2 ]>"
+                    but it "was <[ 1, 2 ]>, which additionally has 1 of <1>");
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_fails_for_missing_and_superfluous_elements() {
+                assert_fails!((&[2, 1, 2]).$assertion(&[1, 3, 3]),
+                    expected it "to contain exactly in any order <[ 1, 3, 3 ]>"
+                    but it "was <[ 2, 1, 2 ]>, which lacks 2 of <3> and additionally has 2 of <2>");
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_fails_for_too_few_equal_elements() {
+                assert_fails!((&[1, 2]).$assertion(&[1, 2, 2]),
+                    expected it "to contain exactly in any order <[ 1, 2, 2 ]>"
+                    but it "was <[ 1, 2 ]>, which lacks 1 of <2>");
+            }
+
+            #[test]
+            fn contains_exactly_in_any_order_fails_for_too_many_equal_elements() {
+                assert_fails!((&[1, 1, 1, 2]).$assertion(&[1, 2]),
+                    expected it "to contain exactly in any order <[ 1, 2 ]>"
+                    but it "was <[ 1, 1, 1, 2 ]>, which additionally has 2 of <1>");
+            }
+        }
     }
 
-    #[test]
-    fn contains_all_of_passes_for_true_sub_multiset() {
-        assert_that!(&[1, 2, 3]).contains_all_of(&[1, 3]);
-    }
-
-    #[test]
-    fn contains_all_of_fails_for_single_non_contained_item() {
-        assert_fails!((&[1, 2, 3]).contains_all_of(&[4]),
-            expected it "to contain all of <[ 4 ]>"
-            but it "was <[ 1, 2, 3 ]>, which lacks 1 of <4>");
-    }
-
-    #[test]
-    fn contains_all_of_fails_for_more_often_contained_item() {
-        assert_fails!((&[1, 2, 3]).contains_all_of(&[1, 2, 2, 2]),
-            expected it "to contain all of <[ 1, 2, 2, 2 ]>"
-            but it "was <[ 1, 2, 3 ]>, which lacks 2 of <2>");
-    }
-
-    #[test]
-    fn contains_all_of_fails_for_multiple_non_contained_items() {
-        assert_fails!((&[1, 2, 3]).contains_all_of(&[1, 1, 4, 4, 5]),
-            expected it "to contain all of <[ 1, 1, 4, 4, 5 ]>"
-            but it "was <[ 1, 2, 3 ]>, which lacks 1 of <1>, 2 of <4>, 1 of <5>");
-    }
-
-    #[test]
-    fn contains_none_of_passes_for_empty_expected_items() {
-        assert_that!(&["apple"]).contains_none_of(&[] as &[&str]);
-    }
-
-    #[test]
-    fn contains_none_of_passes_for_single_non_contained_item() {
-        assert_that!(&["apple", "banana"]).contains_none_of(&["cherry"]);
-    }
-
-    #[test]
-    fn contains_none_of_passes_for_multiple_non_contained_items() {
-        assert_that!(&["apple", "banana"]).contains_none_of(&["cherry", "dragon fruit"]);
-    }
-
-    #[test]
-    fn contains_none_of_fails_for_single_contained_element() {
-        assert_fails!((&["apple", "banana", "cherry"]).contains_none_of(&["banana"]),
-            expected it "not to contain any of <[ \"banana\" ]>"
-            but it "was <[ \"apple\", [\"banana\"], \"cherry\" ]>");
-    }
-
-    #[test]
-    fn contains_none_of_fails_for_mixed_elements() {
-        assert_fails!((&["apple", "banana", "cherry"]).contains_none_of(&["dragon fruit", "apple"]),
-            expected it "not to contain any of <[ \"dragon fruit\", \"apple\" ]>"
-            but it "was <[ [\"apple\"], \"banana\", \"cherry\" ]>");
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_passes_for_empty_slices() {
-        assert_that!(&[] as &[&str]).contains_exactly_in_any_order(&[] as &[&str]);
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_passes_for_slices_with_single_element() {
-        assert_that!(&[1]).contains_exactly_in_any_order(&[1]);
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_passes_for_same_elements_in_different_order() {
-        assert_that!(&[1, 2, 3]).contains_exactly_in_any_order(&[2, 3, 1]);
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_passes_for_correct_multiplicity() {
-        assert_that!(&[2, 1, 2]).contains_exactly_in_any_order(&[1, 2, 2]);
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_fails_for_missing_element() {
-        assert_fails!((&[1]).contains_exactly_in_any_order(&[1, 2]),
-            expected it "to contain exactly in any order <[ 1, 2 ]>"
-            but it "was <[ 1 ]>, which lacks 1 of <2>");
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_fails_for_superfluous_element() {
-        assert_fails!((&[1, 2]).contains_exactly_in_any_order(&[2]),
-            expected it "to contain exactly in any order <[ 2 ]>"
-            but it "was <[ 1, 2 ]>, which additionally has 1 of <1>");
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_fails_for_missing_and_superfluous_elements() {
-        assert_fails!((&[2, 1, 2]).contains_exactly_in_any_order(&[1, 3, 3]),
-            expected it "to contain exactly in any order <[ 1, 3, 3 ]>"
-            but it "was <[ 2, 1, 2 ]>, which lacks 2 of <3> and additionally has 2 of <2>");
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_fails_for_too_few_equal_elements() {
-        assert_fails!((&[1, 2]).contains_exactly_in_any_order(&[1, 2, 2]),
-            expected it "to contain exactly in any order <[ 1, 2, 2 ]>"
-            but it "was <[ 1, 2 ]>, which lacks 1 of <2>");
-    }
-
-    #[test]
-    fn contains_exactly_in_any_order_fails_for_too_many_equal_elements() {
-        assert_fails!((&[1, 1, 1, 2]).contains_exactly_in_any_order(&[1, 2]),
-            expected it "to contain exactly in any order <[ 1, 2 ]>"
-            but it "was <[ 1, 1, 1, 2 ]>, which additionally has 2 of <1>");
-    }
+    test_contains_exactly_in_any_order!(contains_exactly_in_any_order);
 
     #[test]
     fn contains_contiguous_subsequence_passes_for_empty_subsequence() {

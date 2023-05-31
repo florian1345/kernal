@@ -1,4 +1,6 @@
 use std::borrow::Borrow;
+use std::collections::HashSet;
+use std::hash::Hash;
 
 pub(crate) mod multiset;
 
@@ -12,4 +14,20 @@ where
     RB: Borrow<R>
 {
     to_borrow.iter().map(|(l, r)| (l.borrow(), r.borrow())).collect()
+}
+
+pub(crate) trait Set<T> : FromIterator<T> {
+    fn contains(&self, item: &T) -> bool;
+}
+
+impl<T: PartialEq> Set<T> for Vec<T> {
+    fn contains(&self, item: &T) -> bool {
+        self.as_slice().contains(item)
+    }
+}
+
+impl<T: Eq + Hash> Set<T> for HashSet<T> {
+    fn contains(&self, item: &T) -> bool {
+        HashSet::contains(self, item)
+    }
 }

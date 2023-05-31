@@ -1,6 +1,7 @@
 //! This module re-exports the [assert_that] macro as well as all assertion traits implemented by
-//! some results of that macro. This means that by glob-importing this module all assertion methods
-//! become available.
+//! some results of that macro, except performance-optimized ones (see
+//! [fast_prelude](crate::fast_prelude)). This means that by glob-importing this module all
+//! functionally distinguishable assertion methods become available.
 
 pub use crate::assert_that;
 pub use crate::abs_diff::AbsDiffPartialOrdAssertions;
