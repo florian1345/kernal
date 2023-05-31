@@ -14,6 +14,7 @@ use crate::util::multiset::Multiset;
 
 use std::borrow::Borrow;
 use std::fmt::Debug;
+use crate::util::multiset::vec::VecMultiset;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Map] trait whose [Map::Value] implements [PartialEq] in addition
@@ -194,7 +195,8 @@ where
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
-        let (missing_values, _) = compute_missing_and_superfluous(self.data.values(), &expected_values);
+        let (missing_values, _) = compute_missing_and_superfluous::<_, VecMultiset<_>, _>(
+            self.data.values(), &expected_values);
 
         if !missing_values.is_empty() {
             let values_debug = CollectionDebug { collection: &expected_values };
@@ -242,7 +244,8 @@ where
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
         let (missing_values, superfluous_values) =
-            compute_missing_and_superfluous(self.data.values(), &expected_values);
+            compute_missing_and_superfluous::<_, VecMultiset<_>, _>(
+                self.data.values(), &expected_values);
 
         if !missing_values.is_empty() || !superfluous_values.is_empty() {
             let expected_values_debug = CollectionDebug { collection: &expected_values };
