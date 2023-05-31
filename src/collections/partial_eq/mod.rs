@@ -159,7 +159,7 @@ where
     M: Multiset<&'item C::Item>
 {
     let (missing_multiset, superfluous_multiset) =
-        compute_missing_and_superfluous::<_, M, _>(actual_items, &expected_items);
+        compute_missing_and_superfluous::<_, M, _>(actual_items, expected_items);
 
     if !missing_multiset.is_empty() || !superfluous_multiset.is_empty() {
         let expected_items_debug = CollectionDebug { collection: &expected_items };
