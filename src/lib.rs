@@ -101,6 +101,7 @@ pub mod boolean;
 pub mod character;
 pub mod collections;
 pub mod error;
+pub mod fast_prelude;
 pub mod lock;
 pub mod maps;
 pub mod num;
