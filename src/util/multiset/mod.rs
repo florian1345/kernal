@@ -1,5 +1,6 @@
 use std::fmt::{self, Debug, Formatter};
 
+pub(crate) mod btree;
 pub(crate) mod hash;
 pub(crate) mod vec;
 
@@ -44,6 +45,16 @@ pub(crate) trait Multiset<T> : Debug + FromIterator<T> {
     fn remove(&mut self, item: &T) -> bool;
 }
 
+fn multiset_from_iter<T, M: Multiset<T>, I: IntoIterator<Item = T>>(iter: I) -> M {
+    let mut multiset = M::new();
+
+    for item in iter {
+        multiset.add(item);
+    }
+
+    multiset
+}
+
 fn fmt_multiset_debug<T, M>(multiset: &M, f: &mut Formatter<'_>) -> fmt::Result
 where
     T: Debug + PartialEq,
@@ -58,6 +69,39 @@ where
     }
 
     Ok(())
+}
+
+trait MultisetMap<T> {
+
+    fn get_mut(&mut self, item: &T) -> Option<&mut usize>;
+
+    fn insert(&mut self, item: T);
+
+    fn remove(&mut self, item: &T);
+}
+
+fn multiset_map_add<T, M: MultisetMap<T>>(multiset_map: &mut M, item: T) {
+    if let Some(multiplicity) = multiset_map.get_mut(&item) {
+        *multiplicity += 1;
+    }
+    else {
+        multiset_map.insert(item);
+    }
+}
+
+fn multiset_map_remove<T, M: MultisetMap<T>>(multiset_map: &mut M, item: &T) -> bool {
+    if let Some(multiplicity) = multiset_map.get_mut(item) {
+        *multiplicity -= 1;
+
+        if *multiplicity == 0 {
+            multiset_map.remove(item);
+        }
+
+        true
+    }
+    else {
+        false
+    }
 }
 
 #[cfg(test)]
