@@ -19,6 +19,7 @@ use crate::collections::ordered::OrderedCollection;
 use crate::util::{borrow_all, Set};
 use crate::util::multiset::Multiset;
 
+pub mod btree;
 pub mod hash;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an

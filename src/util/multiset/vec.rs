@@ -81,14 +81,8 @@ impl<T: Debug + PartialEq> Multiset<T> for VecMultiset<T> {
 }
 
 impl<T: Debug + PartialEq> FromIterator<T> for VecMultiset<T> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut multiset = VecMultiset::new();
-
-        for item in iter {
-            multiset.add(item);
-        }
-
-        multiset
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> VecMultiset<T> {
+        multiset::multiset_from_iter(iter)
     }
 }
 

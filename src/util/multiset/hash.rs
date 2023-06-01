@@ -3,7 +3,21 @@ use std::collections::hash_map::Iter as HashMapIter;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
 
-use crate::util::multiset::{self, Multiset};
+use crate::util::multiset::{self, Multiset, MultisetMap};
+
+impl<T: Eq + Hash> MultisetMap<T> for HashMap<T, usize> {
+    fn get_mut(&mut self, item: &T) -> Option<&mut usize> {
+        HashMap::get_mut(self, item)
+    }
+
+    fn insert(&mut self, item: T) {
+        self.insert(item, 1);
+    }
+
+    fn remove(&mut self, item: &T) {
+        HashMap::remove(self, item);
+    }
+}
 
 pub(crate) struct HashMultisetIter<'iter, T> {
     hash_map_iter: HashMapIter<'iter, T, usize>
@@ -21,7 +35,7 @@ pub(crate) struct HashMultiset<T> {
     entries: HashMap<T, usize>
 }
 
-impl<T: Debug + Hash + Eq> Multiset<T> for HashMultiset<T> {
+impl<T: Debug + Eq + Hash> Multiset<T> for HashMultiset<T> {
 
     type Iter<'iter> = HashMultisetIter<'iter, T>
     where
@@ -48,43 +62,21 @@ impl<T: Debug + Hash + Eq> Multiset<T> for HashMultiset<T> {
     }
 
     fn add(&mut self, item: T) {
-        if let Some(multiplicity) = self.entries.get_mut(&item) {
-            *multiplicity += 1;
-        }
-        else {
-            self.entries.insert(item, 1);
-        }
+        multiset::multiset_map_add(&mut self.entries, item)
     }
 
     fn remove(&mut self, item: &T) -> bool {
-        if let Some(multiplicity) = self.entries.get_mut(item) {
-            *multiplicity -= 1;
-
-            if *multiplicity == 0 {
-                self.entries.remove(item);
-            }
-
-            true
-        }
-        else {
-            false
-        }
+        multiset::multiset_map_remove(&mut self.entries, item)
     }
 }
 
-impl<T: Debug + Hash + Eq> FromIterator<T> for HashMultiset<T> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut multiset = HashMultiset::new();
-
-        for item in iter {
-            multiset.add(item);
-        }
-
-        multiset
+impl<T: Debug + Eq + Hash> FromIterator<T> for HashMultiset<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> HashMultiset<T> {
+        multiset::multiset_from_iter(iter)
     }
 }
 
-impl<T: Debug + Hash + Eq> Debug for HashMultiset<T> {
+impl<T: Debug + Eq + Hash> Debug for HashMultiset<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         multiset::fmt_multiset_debug(self, f)
     }

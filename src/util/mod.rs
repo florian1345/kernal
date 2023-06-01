@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::hash::Hash;
 
 pub(crate) mod multiset;
@@ -29,5 +29,11 @@ impl<T: PartialEq> Set<T> for Vec<T> {
 impl<T: Eq + Hash> Set<T> for HashSet<T> {
     fn contains(&self, item: &T) -> bool {
         HashSet::contains(self, item)
+    }
+}
+
+impl<T: Eq + Ord> Set<T> for BTreeSet<T> {
+    fn contains(&self, item: &T) -> bool {
+        BTreeSet::contains(self, item)
     }
 }

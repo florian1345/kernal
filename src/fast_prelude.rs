@@ -4,4 +4,5 @@
 //!
 //! The separation between the two preludes is intended to avoid clutter in IDE autocompletion.
 
+pub use crate::collections::partial_eq::btree::CollectionEqOrdAssertions;
 pub use crate::collections::partial_eq::hash::CollectionEqHashAssertions;
