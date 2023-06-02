@@ -163,7 +163,7 @@ where
     MS: Multiset<&'value M::Value>
 {
     let (missing_values, _) =
-        compute_missing_and_superfluous::<_, MS, _>(actual_values, &expected_values);
+        compute_missing_and_superfluous::<_, MS, _>(actual_values, expected_values);
 
     if !missing_values.is_empty() {
         let values_debug = CollectionDebug { collection: &expected_values };
@@ -186,7 +186,7 @@ where
     MS: Multiset<&'value M::Value>
 {
     let (missing_values, superfluous_values) =
-        compute_missing_and_superfluous::<_, MS, _>(actual_values, &expected_values);
+        compute_missing_and_superfluous::<_, MS, _>(actual_values, expected_values);
 
     if !missing_values.is_empty() || !superfluous_values.is_empty() {
         let expected_values_debug = CollectionDebug { collection: &expected_values };
