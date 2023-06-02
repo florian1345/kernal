@@ -91,10 +91,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_fails, test_contains_values};
+    use crate::{assert_fails, test_contains_values, test_contains_exactly_values};
     use crate::prelude::*;
 
     use std::collections::{BTreeMap, HashMap};
 
     test_contains_values!(contains_values_using_hash);
+
+    test_contains_exactly_values!(contains_exactly_values_using_hash);
 }
