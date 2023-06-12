@@ -14,3 +14,14 @@ categories = [ "development-tools::testing" ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[profile.bench]
+opt-level = 3
+lto = true
+
+[[bench]]
+name = "bench"
+harness = false
