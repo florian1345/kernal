@@ -6,4 +6,5 @@
 
 pub use crate::collections::partial_eq::btree::CollectionEqOrdAssertions;
 pub use crate::collections::partial_eq::hash::CollectionEqHashAssertions;
+pub use crate::maps::partial_eq::btree::MapEqOrdAssertions;
 pub use crate::maps::partial_eq::hash::MapEqHashAssertions;
