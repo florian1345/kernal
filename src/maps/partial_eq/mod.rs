@@ -16,6 +16,7 @@ use crate::util::multiset::vec::VecMultiset;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
+pub mod btree;
 pub mod hash;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
