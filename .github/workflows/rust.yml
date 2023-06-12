@@ -26,5 +26,7 @@ jobs:
       run: |
         rustup component add clippy
         cargo clippy --verbose
+    - name: Check benches
+      run: cargo check --benches
     - name: Documentation
       run: cargo doc --verbose
