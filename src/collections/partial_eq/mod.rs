@@ -50,14 +50,32 @@ where
     /// according to [PartialEq]. If the provided iterator contains multiple equal elements, this
     /// function asserts that the tested collection contains at least that number of equal elements,
     /// so `[1, 1, 2]` contains all of `[1, 1]`, but not all of `[1, 1, 1]`.
+    ///
+    /// This operation might be slow for large collections. If this is an issue, consider using
+    /// [CollectionEqHashAssertions::contains_all_of_using_hash](hash::CollectionEqHashAssertions::contains_all_of_using_hash)
+    /// or
+    /// [CollectionEqOrdAssertions::contains_all_of_using_ord](btree::CollectionEqOrdAssertions::contains_all_of_using_ord)
+    /// instead, if applicable for the item type.
     fn contains_all_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self;
 
     /// Asserts that the tested collection contains no element which is equal to one the given
     /// `items` according to [PartialEq].
+    ///
+    /// This operation might be slow for large collections. If this is an issue, consider using
+    /// [CollectionEqHashAssertions::contains_none_of_using_hash](hash::CollectionEqHashAssertions::contains_none_of_using_hash)
+    /// or
+    /// [CollectionEqOrdAssertions::contains_none_of_using_ord](btree::CollectionEqOrdAssertions::contains_none_of_using_ord)
+    /// instead, if applicable for the item type.
     fn contains_none_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self;
 
     /// Asserts that there is a one-to-one matching of the given `items` and the elements of the
     /// tested collection such that matched elements are equal according to [PartialEq].
+    ///
+    /// This operation might be slow for large collections. If this is an issue, consider using
+    /// [CollectionEqHashAssertions::contains_exactly_in_any_order_using_hash](hash::CollectionEqHashAssertions::contains_exactly_in_any_order_using_hash)
+    /// or
+    /// [CollectionEqOrdAssertions::contains_exactly_in_any_order_using_ord](btree::CollectionEqOrdAssertions::contains_exactly_in_any_order_using_ord)
+    /// instead, if applicable for the item type.
     fn contains_exactly_in_any_order<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
