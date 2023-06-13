@@ -87,9 +87,22 @@
 //!
 //! # Notes on performance
 //!
-//! The current, early version of this crate does not yet contain many performance optimizations.
-//! Should you write assertions on large amounts of data, this may become a bottleneck. In those
-//! cases, you should consider falling back to standard assertions.
+//! Should you write assertions on large amounts of data, the standard assertions may become a
+//! bottleneck. For some use cases, there are specialized assertions that use additional trait
+//! bounds to improve performance. These are available under the [fast_prelude] module. See below
+//! for an example on how to use it.
+//!
+//! ```
+//! use kernal::prelude::*;
+//! use kernal::fast_prelude::*;
+//!
+//! assert_that!([1, 2, 3, 4, 5])
+//!     .contains_all_of_using_hash([2, 3, 4])
+//!     .contains_none_of_using_ord([6, 7, 8]);
+//! ```
+//!
+//! If no sufficiently performant assertion is available, you should consider falling back to
+//! standard assertions.
 
 #![allow(clippy::wrong_self_convention)]
 #![warn(missing_docs)]
