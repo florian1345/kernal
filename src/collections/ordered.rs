@@ -23,12 +23,12 @@ impl<'collection, T: 'collection> OrderedCollection<'collection> for BTreeSet<T>
 
 impl<'collection, C> OrderedCollection<'collection> for &C
 where
-    C: OrderedCollection<'collection> + ?Sized + 'collection
+    C: OrderedCollection<'collection> + ?Sized
 {}
 
 impl<'collection, C> OrderedCollection<'collection> for &mut C
 where
-    C: OrderedCollection<'collection> + ?Sized + 'collection
+    C: OrderedCollection<'collection> + ?Sized
 {}
 
 impl<'collection, C> OrderedCollection<'collection> for Box<C>
