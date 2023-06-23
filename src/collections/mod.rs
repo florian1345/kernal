@@ -108,7 +108,7 @@ impl_collection!(BTreeSet<T>, BTreeSetIter);
 
 impl<'collection, T> Collection<'collection> for &T
 where
-    T: Collection<'collection> + ?Sized + 'collection
+    T: Collection<'collection> + ?Sized
 {
     type Item = T::Item;
     type Iter<'iter> = T::Iter<'iter>
@@ -130,7 +130,7 @@ where
 
 impl<'collection, T> Collection<'collection> for &mut T
 where
-    T: Collection<'collection> + ?Sized + 'collection
+    T: Collection<'collection> + ?Sized
 {
     type Item = T::Item;
     type Iter<'iter> = T::Iter<'iter>
@@ -203,14 +203,14 @@ where
     }
 }
 
-pub(crate) struct HighlightedCollectionDebug<'wrapper, C> {
-    pub(crate) collection: &'wrapper C,
+pub(crate) struct HighlightedCollectionDebug<C> {
+    pub(crate) collection: C,
     pub(crate) highlighted_sections: Vec<Range<usize>>,
 }
 
-impl<'wrapper, C> HighlightedCollectionDebug<'wrapper, C> {
-    pub(crate) fn with_single_highlighted_element(collection: &'wrapper C, highlighted_index: usize)
-            -> HighlightedCollectionDebug<'wrapper, C> {
+impl<C> HighlightedCollectionDebug<C> {
+    pub(crate) fn with_single_highlighted_element(collection: C, highlighted_index: usize)
+            -> HighlightedCollectionDebug<C> {
         HighlightedCollectionDebug {
             collection,
             highlighted_sections: vec![highlighted_index..(highlighted_index + 1)]
@@ -251,7 +251,7 @@ fn close_section_after_item_if_applicable(f: &mut Formatter<'_>,
     Ok(false)
 }
 
-impl<'wrapper, 'collection, C> Debug for HighlightedCollectionDebug<'wrapper, C>
+impl<'collection, C> Debug for HighlightedCollectionDebug<C>
 where
     C: Collection<'collection>,
     C::Item: Debug
