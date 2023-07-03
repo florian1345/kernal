@@ -38,7 +38,7 @@ assert_that!("almost")
 Kernal allows the creation of custom assertions to test instances of your types in a more natural
 way. This is achieved by grouping assertions you want to offer for specific types into traits, which
 are then implemented on the output type of the `assert_that` macro. For more details, view the
-crate-level [documentation][Doc] for more details. The example below demonstrates this process.
+crate-level [documentation][Doc]. The example below demonstrates this process.
 
 ```rust
 // Our type for which we want to write assertions.
