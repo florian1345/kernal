@@ -3,7 +3,6 @@
 //! [AbsDiffPartialOrdAssertions] for more details.
 
 use std::borrow::Borrow;
-use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};
@@ -17,7 +16,7 @@ pub trait AbsDiff {
     /// The type returned by the absolute difference operation.
     type ReturnType;
 
-    /// Computes the absolute difference between this and the given `other` intance, i.e. the
+    /// Computes the absolute difference between this and the given `other` instance, i.e. the
     /// "distance" between the two values.
     fn abs_diff(&self, other: &Self) -> Self::ReturnType;
 }
