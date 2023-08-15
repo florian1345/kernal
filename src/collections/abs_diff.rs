@@ -1,3 +1,6 @@
+//! Contains specialized assertions for [Collection]s whose items implement [AbsDiff]. See
+//! [CollectionAbsDiffAssertions] for more details.
+
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
