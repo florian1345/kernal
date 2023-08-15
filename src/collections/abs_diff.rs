@@ -4,7 +4,6 @@ use std::fmt::Debug;
 use crate::abs_diff::AbsDiff;
 use crate::{AssertThat, Failure};
 use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug};
-use crate::collections::ordered::OrderedCollection;
 use crate::util::borrow_all;
 
 fn highlight_violating_index<'collection, 'reference, C, P>(collection: &'reference C, predicate: P)

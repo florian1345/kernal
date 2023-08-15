@@ -3,6 +3,7 @@
 //! [AbsDiffPartialOrdAssertions] for more details.
 
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::{AssertThat, Failure};
