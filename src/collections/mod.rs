@@ -29,7 +29,7 @@ pub mod partial_ord;
 ///
 /// The content of a collection is defined by an iterator. Although this will imply an ordering, not
 /// all collections have to be semantically ordered. Such collections are marked by the
-/// [OrderedCollection](ordered::OrderedCollection) trait.
+/// [OrderedCollection] trait.
 ///
 /// This trait is required to allow collection-based assertions. It is implemented on all common
 /// collection types in the standard library and references thereof.
