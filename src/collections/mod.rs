@@ -2,6 +2,8 @@
 //! Additional assertions for collections are provided by [CollectionAssertions]. Sub-modules
 //! provide further specialization.
 
+use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, BTreeSet, HashSet, LinkedList, VecDeque};
 use std::collections::binary_heap::Iter as BinaryHeapIter;
 use std::collections::btree_set::Iter as BTreeSetIter;
@@ -13,6 +15,8 @@ use std::ops::Range;
 use std::slice::Iter as SliceIter;
 
 use crate::{AssertThat, Failure};
+use crate::collections::ordered::OrderedCollection;
+use crate::util::borrow_all;
 
 pub mod abs_diff;
 pub mod ord;
@@ -399,6 +403,51 @@ where
     assert_that
 }
 
+/// Asserts that each item at position X in the collection of the given `assert_that` (`actual`) and
+/// the item at position X in `items` (`expected`) satisfy `comparator(expected, actual)`. If a
+/// violation is found, a failure is produced with an `expected_it` of `"to contain exactly in the
+/// given order {items}"` suffixed with the given `expected_it_suffix`.
+fn assert_contains_exactly_in_given_order_by<'collection, C, E, I, F>(assert_that: AssertThat<C>,
+    items: I, comparator: F, expected_it_suffix: &str) -> AssertThat<C>
+where
+    C: OrderedCollection<'collection>,
+    C::Item: Debug,
+    E: Borrow<C::Item>,
+    I: IntoIterator<Item = E>,
+    F: Fn(&C::Item, &C::Item) -> bool
+{
+    let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
+    let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
+    let collection_len = assert_that.data.len();
+
+    let counter_example_section = match collection_len.cmp(&expected_items.len()) {
+        Ordering::Less => Some(collection_len..collection_len),
+        Ordering::Greater => Some(expected_items.len()..collection_len),
+        Ordering::Equal => expected_items.iter()
+            .zip(assert_that.data.iterator())
+            .enumerate()
+            .find(|(_, (expected_item, collection_item))|
+                !comparator(expected_item, collection_item))
+            .map(|(index, _)| index..(index + 1))
+    };
+
+    if let Some(counter_example_section) = counter_example_section {
+        let expected_items_debug = CollectionDebug { collection: &expected_items };
+        let collection_debug = HighlightedCollectionDebug {
+            collection: &assert_that.data,
+            highlighted_sections: vec![counter_example_section]
+        };
+
+        Failure::new(&assert_that)
+            .expected_it(format!("to contain exactly in the given order <{:?}>{}",
+                expected_items_debug, expected_it_suffix))
+            .but_it(format!("was <{:?}>", collection_debug))
+            .fail();
+    }
+
+    assert_that
+}
+
 impl<'collection, C> CollectionAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
@@ -471,6 +520,117 @@ where
     fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(self, mut predicate: F) -> Self {
         assert_all_match_predicate(self, |item| !predicate(item),
             "not to contain elements matching predicate")
+    }
+}
+
+fn find_contiguous_subsequence_by<'collection, C, F>(collection: &C, subsequence: &[&C::Item],
+    mut matches: F) -> Option<Vec<Range<usize>>>
+where
+    C: OrderedCollection<'collection>,
+    F: FnMut(&C::Item, &C::Item) -> bool
+{
+    let collection_vec = collection.iterator().collect::<Vec<_>>();
+
+    if collection_vec.len() < subsequence.len() {
+        return None;
+    }
+
+    for start in 0..=(collection_vec.len() - subsequence.len()) {
+        let range = start..(start + subsequence.len());
+        let slice = &collection_vec[range.clone()];
+
+        if slice.iter().zip(subsequence.iter()).all(|(item_1, item_2)| matches(item_1, item_2)) {
+            return Some(vec![range]);
+        }
+    }
+
+    None
+}
+
+fn find_subsequence_by<'collection, C, F>(collection: &C, subsequence: &[&C::Item], mut matches: F)
+    -> Option<Vec<Range<usize>>>
+where
+    C: OrderedCollection<'collection>,
+    F: FnMut(&C::Item, &C::Item) -> bool
+{
+    if subsequence.is_empty() {
+        return Some(vec![0..0]);
+    }
+
+    let mut ranges = Vec::new();
+    let mut current_range_start = None;
+    let mut subsequence_iterator = subsequence.iter().cloned().peekable();
+
+    for (index, item) in collection.iterator().enumerate() {
+        let next = subsequence_iterator.peek();
+
+        if next.is_some_and(|subsequence_item| matches(item, subsequence_item)) {
+            current_range_start.get_or_insert(index);
+            subsequence_iterator.next();
+        }
+        else if let Some(current_range_start) = current_range_start.take() {
+            ranges.push(current_range_start..index);
+
+            if next.is_none() {
+                break;
+            }
+        }
+    }
+
+    if let Some(last_range_start) = current_range_start {
+        ranges.push(last_range_start..collection.len());
+    }
+
+    if subsequence_iterator.next().is_some() {
+        None
+    }
+    else {
+        Some(ranges)
+    }
+}
+
+fn find_prefix_by<'collection, C, F>(collection: &C, prefix: &[&C::Item], mut matches: F)
+    -> Option<Vec<Range<usize>>>
+where
+    C: OrderedCollection<'collection>,
+    F: FnMut(&C::Item, &C::Item) -> bool
+{
+    if collection.len() < prefix.len() {
+        return None;
+    }
+
+    let has_prefix = collection.iterator()
+        .zip(prefix.iter())
+        .all(|(item_1, item_2)| matches(item_1, item_2));
+
+    if has_prefix {
+        Some(vec![0..prefix.len()])
+    }
+    else {
+        None
+    }
+}
+
+fn find_suffix_by<'collection, C, F>(collection: &C, suffix: &[&C::Item], mut matches: F)
+    -> Option<Vec<Range<usize>>>
+where
+    C: OrderedCollection<'collection>,
+    F: FnMut(&C::Item, &C::Item) -> bool
+{
+    if collection.len() < suffix.len() {
+        return None;
+    }
+
+    let collection_suffix_start = collection.len() - suffix.len();
+    let has_suffix = collection.iterator().skip(collection_suffix_start)
+        .zip(suffix.iter())
+        .all(|(item_1, item_2)| matches(item_1, item_2));
+
+    if has_suffix {
+        Some(vec![collection_suffix_start..collection.len()])
+    }
+    else {
+        None
     }
 }
 

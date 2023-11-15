@@ -3,18 +3,24 @@
 //! more details.
 
 use std::borrow::Borrow;
-use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::ops::Range;
 
 use crate::{AssertThat, Failure};
 use crate::collections::{
     assert_all_match_predicate,
+    assert_contains_exactly_in_given_order_by,
     Collection,
     CollectionDebug,
     HighlightedCollectionDebug
 };
 use crate::util::multiset::vec::VecMultiset;
+use crate::collections::{
+    find_contiguous_subsequence_by,
+    find_prefix_by,
+    find_subsequence_by,
+    find_suffix_by
+};
 use crate::collections::ordered::OrderedCollection;
 use crate::util::{borrow_all, Set};
 use crate::util::multiset::Multiset;
@@ -333,17 +339,7 @@ where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq
 {
-    let collection_vec = collection.iterator().collect::<Vec<_>>();
-
-    for start in 0..=(collection_vec.len() - subsequence.len()) {
-        let range = start..(start + subsequence.len());
-
-        if &collection_vec[range.clone()] == subsequence {
-            return Some(vec![range]);
-        }
-    }
-
-    None
+    find_contiguous_subsequence_by(collection, subsequence, PartialEq::eq)
 }
 
 fn find_subsequence<'collection, C>(collection: &C, subsequence: &[&C::Item])
@@ -352,38 +348,7 @@ where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq
 {
-    if subsequence.is_empty() {
-        return Some(vec![0..0]);
-    }
-
-    let mut ranges = Vec::new();
-    let mut current_range_start = None;
-    let mut subsequence_iterator = subsequence.iter().cloned().peekable();
-
-    for (index, item) in collection.iterator().enumerate() {
-        if subsequence_iterator.peek() == Some(&item) {
-            current_range_start.get_or_insert(index);
-            subsequence_iterator.next();
-        }
-        else if let Some(current_range_start) = current_range_start.take() {
-            ranges.push(current_range_start..index);
-
-            if subsequence_iterator.peek().is_none() {
-                break;
-            }
-        }
-    }
-
-    if let Some(last_range_start) = current_range_start {
-        ranges.push(last_range_start..collection.len());
-    }
-
-    if subsequence_iterator.next().is_some() {
-        None
-    }
-    else {
-        Some(ranges)
-    }
+    find_subsequence_by(collection, subsequence, PartialEq::eq)
 }
 
 fn find_prefix<'collection, C>(collection: &C, prefix: &[&C::Item]) -> Option<Vec<Range<usize>>>
@@ -391,14 +356,7 @@ where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq
 {
-    let collection_prefix = collection.iterator().take(prefix.len()).collect::<Vec<_>>();
-
-    if collection_prefix == prefix {
-        Some(vec![0..prefix.len()])
-    }
-    else {
-        None
-    }
+    find_prefix_by(collection, prefix, PartialEq::eq)
 }
 
 fn find_suffix<'collection, C>(collection: &C, suffix: &[&C::Item]) -> Option<Vec<Range<usize>>>
@@ -406,19 +364,7 @@ where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq
 {
-    if collection.len() < suffix.len() {
-        return None;
-    }
-
-    let collection_suffix_start = collection.len() - suffix.len();
-    let collection_suffix = collection.iterator().skip(collection_suffix_start).collect::<Vec<_>>();
-
-    if collection_suffix == suffix {
-        Some(vec![collection_suffix_start..collection.len()])
-    }
-    else {
-        None
-    }
+    find_suffix_by(collection, suffix, PartialEq::eq)
 }
 
 fn assert_contains_subsequence_kind<'collection, C, E, I, F>(assert_that: AssertThat<C>,
@@ -557,35 +503,7 @@ where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>
     {
-        let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
-        let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
-        let collection_len = self.data.len();
-
-        let counter_example_section = match collection_len.cmp(&expected_items.len()) {
-            Ordering::Less => Some(collection_len..collection_len),
-            Ordering::Greater => Some(expected_items.len()..collection_len),
-            Ordering::Equal => expected_items.iter()
-                .zip(self.data.iterator())
-                .enumerate()
-                .find(|(_, (expected_item, collection_item))| *expected_item != collection_item)
-                .map(|(index, _)| index..(index + 1))
-        };
-
-        if let Some(counter_example_section) = counter_example_section {
-            let expected_items_debug = CollectionDebug { collection: &expected_items };
-            let collection_debug = HighlightedCollectionDebug {
-                collection: &self.data,
-                highlighted_sections: vec![counter_example_section]
-            };
-
-            Failure::new(&self)
-                .expected_it(
-                    format!("to contain exactly in the given order <{:?}>", expected_items_debug))
-                .but_it(format!("was <{:?}>", collection_debug))
-                .fail();
-        }
-
-        self
+        assert_contains_exactly_in_given_order_by(self, items, PartialEq::eq, "")
     }
 }
 
@@ -838,6 +756,13 @@ mod tests {
     }
 
     #[test]
+    fn contains_contiguous_subsequence_fails_for_empty_test_sequence() {
+        assert_fails!(([] as [i32; 0]).contains_contiguous_subsequence(&[4]),
+            expected it "to contain the contiguous subsequence <[ 4 ]>"
+            but it "was <[ ]>");
+    }
+
+    #[test]
     fn contains_contiguous_subsequence_fails_for_non_contained_element() {
         assert_fails!((&[1, 2, 3]).contains_contiguous_subsequence(&[4]),
             expected it "to contain the contiguous subsequence <[ 4 ]>"
@@ -914,6 +839,11 @@ mod tests {
     #[test]
     fn does_not_contain_contiguous_subsequence_passes_for_subsequence_that_is_not_subsequence() {
         assert_that!(&[1, 2, 3]).does_not_contain_contiguous_subsequence(&[1, 3]);
+    }
+
+    #[test]
+    fn does_not_contain_contiguous_subsequence_passes_for_empty_test_sequence() {
+        assert_that!([] as [i32; 0]).does_not_contain_contiguous_subsequence(&[4]);
     }
 
     #[test]
@@ -1167,13 +1097,13 @@ mod tests {
     }
 
     #[test]
-    fn contains_exactly_in_given_order_passes_for_longer_collection() {
+    fn contains_exactly_in_given_order_passes_for_multi_element_collection() {
         assert_that!(&["hello", "world", "!"])
             .contains_exactly_in_given_order(&["hello", "world", "!"]);
     }
 
     #[test]
-    fn contains_exactly_in_given_order_fails_for_prefix() {
+    fn contains_exactly_in_given_order_fails_for_collection_with_extra_element() {
         assert_fails!((&["hello", "world", "!"])
             .contains_exactly_in_given_order(&["hello", "world"]),
             expected it "to contain exactly in the given order <[ \"hello\", \"world\" ]>"
@@ -1189,10 +1119,24 @@ mod tests {
     }
 
     #[test]
-    fn contains_exactly_in_given_order_fails_for_longer_collection() {
+    fn contains_exactly_in_given_order_fails_for_collection_missing_last_element() {
         assert_fails!((&["hello", "world"])
             .contains_exactly_in_given_order(&["hello", "world", "!"]),
             expected it "to contain exactly in the given order <[ \"hello\", \"world\", \"!\" ]>"
             but it "was <[ \"hello\", \"world\" [] ]>");
+    }
+
+    #[test]
+    fn contains_exactly_in_given_order_fails_for_empty_collection_compared_to_singleton() {
+        assert_fails!((&[] as &[u32]).contains_exactly_in_given_order(&[0]),
+            expected it "to contain exactly in the given order <[ 0 ]>"
+            but it "was <[ [] ]>");
+    }
+
+    #[test]
+    fn contains_exactly_in_given_order_fails_for_singleton_compared_to_empty_collection() {
+        assert_fails!((&[0]).contains_exactly_in_given_order(&[]),
+            expected it "to contain exactly in the given order <[ ]>"
+            but it "was <[ [0] ]>");
     }
 }
