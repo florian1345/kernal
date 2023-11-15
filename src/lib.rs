@@ -104,6 +104,7 @@
 //! If no sufficiently performant assertion is available, you should consider falling back to
 //! standard assertions.
 
+#![allow(clippy::single_range_in_vec_init)]
 #![allow(clippy::wrong_self_convention)]
 #![warn(missing_docs)]
 
