@@ -3,7 +3,7 @@
 //! [fast_prelude](crate::fast_prelude)). This means that by glob-importing this module all
 //! functionally distinguishable assertion methods become available.
 
-pub use crate::assert_that;
+pub use crate::{assert_that, dyn_assertions};
 pub use crate::abs_diff::AbsDiffPartialOrdAssertions;
 pub use crate::boolean::BooleanAssertions;
 pub use crate::character::CharacterAssertions;
@@ -13,6 +13,7 @@ pub use crate::collections::abs_diff::{
     OrderedCollectionAbsDiffAssertions
 };
 pub use crate::collections::ord::CollectionOrdAssertions;
+pub use crate::collections::ordered::OrderedCollectionAssertions;
 pub use crate::collections::partial_eq::{
     CollectionPartialEqAssertions,
     OrderedCollectionPartialEqAssertions
