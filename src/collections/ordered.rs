@@ -64,6 +64,7 @@ where
     ///
     /// For convenience, it is recommended to use the [dyn_assertions](crate::dyn_assertions) macro
     /// for constructing the assertions.
+    #[allow(clippy::type_complexity)]
     fn satisfies_exactly_in_given_order(self, assertions: &[Box<dyn Fn(&C::Item)>]) -> Self;
 }
 
