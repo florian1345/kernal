@@ -1,4 +1,5 @@
-//! Defines the [OrderedCollection] trait for [Collection] with item ordering.
+//! Defines the [OrderedCollection] trait for [Collection] with item ordering as well as
+//! [OrderedCollectionAssertions] for general assertions that apply to all ordered collections.
 
 use std::collections::{BTreeSet, LinkedList, VecDeque};
 use std::fmt::Debug;
