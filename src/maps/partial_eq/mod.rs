@@ -525,6 +525,12 @@ mod tests {
             but it "was <[ \"apple\" => 41, [\"banana\" => 42], \"cherry\" => 43 ]>");
     }
 
+    /// Test-case generator for assertions of the kind "contains_values", potentially with different
+    /// implementations (such as HashSet/BTreeSet/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $assertion: The identifier of the assertion method.
     #[macro_export]
     macro_rules! test_contains_values {
         ($assertion:ident) => {
@@ -640,7 +646,12 @@ mod tests {
             but it "was <[ \"apple\" => 1, [\"banana\" => 2] ]>");
     }
 
-
+    /// Test-case generator for assertions of the kind "contains_exactly_values", potentially with
+    /// different implementations (such as HashSet/BTreeSet/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $assertion: The identifier of the assertion method.
     #[macro_export]
     macro_rules! test_contains_exactly_values {
         ($assertion:ident) => {

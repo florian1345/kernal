@@ -107,6 +107,12 @@ fn multiset_map_remove<T, M: MultisetMap<T>>(multiset_map: &mut M, item: &T) -> 
 #[cfg(test)]
 mod tests {
 
+    /// Test-case generator for different Multiset-implementations, with different underlying data
+    /// structures (such as HashMap/BTreeMap/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $multiset_type: The identifier of the tested type implementing Multiset.
     #[macro_export]
     macro_rules! test_multiset_impl {
         ($multiset_type:ident) => {

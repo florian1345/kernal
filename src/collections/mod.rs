@@ -189,7 +189,7 @@ pub(crate) struct CollectionDebug<'wrapper, C> {
     pub(crate) collection: &'wrapper C,
 }
 
-impl<'wrapper, 'collection, C> Debug for CollectionDebug<'wrapper, C>
+impl<'collection, C> Debug for CollectionDebug<'_, C>
 where
     C: Collection<'collection>,
     C::Item: Debug

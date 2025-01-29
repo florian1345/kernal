@@ -46,7 +46,7 @@ impl_lock_ref!(Box<L>);
 impl_lock_ref!(Rc<L>);
 impl_lock_ref!(Arc<L>);
 
-impl<'cow, L: Clone + Lock> Lock for Cow<'cow, L> {
+impl<L: Clone + Lock> Lock for Cow<'_, L> {
     fn is_poisoned(&self) -> bool {
         L::is_poisoned(self.borrow())
     }
