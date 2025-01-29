@@ -8,7 +8,7 @@ struct MapEntryDebug<'reference, 'map, M: Map<'map>> {
     entry: (&'reference M::Key, &'reference M::Value)
 }
 
-impl<'reference, 'map, M> Debug for MapEntryDebug<'reference, 'map, M>
+impl<'map, M> Debug for MapEntryDebug<'_, 'map, M>
 where
     M: Map<'map>,
     M::Key: Debug,
@@ -38,7 +38,7 @@ impl<'reference, 'map, M: Map<'map>> MapEntriesDebug<'reference, 'map, M> {
     }
 }
 
-impl<'reference, 'map, M> Debug for MapEntriesDebug<'reference, 'map, M>
+impl<'map, M> Debug for MapEntriesDebug<'_, 'map, M>
 where
     M: Map<'map>,
     M::Key: Debug,
@@ -53,7 +53,7 @@ pub(crate) struct MapDebug<'wrapper, M> {
     pub(crate) map: &'wrapper M
 }
 
-impl<'wrapper, 'map, M> Debug for MapDebug<'wrapper, M>
+impl<'map, M> Debug for MapDebug<'_, M>
 where
     M: Map<'map>,
     M::Key: Debug,
@@ -73,7 +73,7 @@ where
     pub(crate) highlighted_key: &'key M::Key
 }
 
-impl<'wrapper, 'key, 'map, M> Debug for HighlightedMapDebug<'wrapper, 'key, 'map, M>
+impl<'key, 'map, M> Debug for HighlightedMapDebug<'_, 'key, 'map, M>
 where
     M: Map<'map>,
     'map: 'key,

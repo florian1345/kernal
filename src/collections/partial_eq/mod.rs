@@ -574,6 +574,12 @@ mod tests {
             but it "was <[ 2, 3, [5] ]>");
     }
 
+    /// Test-case generator for assertions of the kind "contains_all_of", potentially with different
+    /// implementations (such as HashSet/BTreeSet/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $assertion: The identifier of the assertion method.
     #[macro_export]
     macro_rules! test_contains_all_of {
         ($assertion:ident) => {
@@ -626,6 +632,12 @@ mod tests {
 
     test_contains_all_of!(contains_all_of);
 
+    /// Test-case generator for assertions of the kind "contains_none_of", potentially with
+    /// different implementations (such as HashSet/BTreeSet/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $assertion: The identifier of the assertion method.
     #[macro_export]
     macro_rules! test_contains_none_of {
         ($assertion:ident) => {
@@ -663,6 +675,12 @@ mod tests {
 
     test_contains_none_of!(contains_none_of);
 
+    /// Test-case generator for assertions of the kind "contains_exactly_in_any_order", potentially
+    /// with different implementations (such as HashSet/BTreeSet/...).
+    ///
+    /// # Arguments
+    ///
+    /// * $assertion: The identifier of the assertion method.
     #[macro_export]
     macro_rules! test_contains_exactly_in_any_order {
         ($assertion:ident) => {
