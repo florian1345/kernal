@@ -498,7 +498,7 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
         let content = read_content_or_fail(&self, "to point to a file with given content");
         let expected_content = expected_content.as_ref();
 
-        if &content != expected_content {
+        if content != expected_content {
             match (std::str::from_utf8(&content), std::str::from_utf8(expected_content)) {
                 (Ok(content), Ok(expected_content)) => {
                     Failure::new(&self)
