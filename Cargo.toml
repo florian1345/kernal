@@ -17,6 +17,7 @@ categories = [ "development-tools::testing" ]
 
 [dev-dependencies]
 criterion = "0.5"
+regex = "1.11.1"
 rstest = "0.24.0"
 rstest_reuse = "0.7.0"
 symlink = "0.1.0"
