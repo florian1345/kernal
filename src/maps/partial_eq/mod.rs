@@ -657,43 +657,43 @@ mod tests {
         ($assertion:ident) => {
             #[test]
             fn contains_exactly_values_passes_for_empty_map_and_no_expected_values() {
-                assert_that!(BTreeMap::<&str, i32>::new()).contains_exactly_values(&[] as &[i32]);
+                assert_that!(BTreeMap::<&str, i32>::new()).$assertion(&[] as &[i32]);
             }
 
             #[test]
             fn contains_exactly_values_passes_for_singleton_map_of_expected_value() {
-                assert_that!(HashMap::from([("apple", 42)])).contains_exactly_values(&[42]);
+                assert_that!(HashMap::from([("apple", 42)])).$assertion(&[42]);
             }
 
             #[test]
             fn contains_exactly_values_passes_for_larger_map_of_expected_values_in_different_order() {
                 assert_that!(BTreeMap::from([("apple", 42), ("banana", 43), ("cherry", 44)]))
-                    .contains_exactly_values(&[44, 43, 42] as &[i32]);
+                    .$assertion(&[44, 43, 42] as &[i32]);
             }
 
             #[test]
             fn contains_exactly_values_passes_for_map_with_correct_higher_multiplicity() {
                 assert_that!(HashMap::from([("apple", 42), ("banana", 42)]))
-                    .contains_exactly_values(&[42, 42]);
+                    .$assertion(&[42, 42]);
             }
 
             #[test]
             fn contains_exactly_values_fails_for_empty_map_and_single_expected_value() {
-                assert_fails!((HashMap::<&str, i32>::new()).contains_exactly_values(&[42]),
+                assert_fails!((HashMap::<&str, i32>::new()).$assertion(&[42]),
                     expected it "to contain exactly the values <[ 42 ]>"
                     but it "was <[ ]>, which lacks 1 of <42>");
             }
 
             #[test]
             fn contains_exactly_values_fails_for_singleton_map_and_no_expected_values() {
-                assert_fails!((BTreeMap::from([("apple", 42)])).contains_exactly_values(&[] as &[i32]),
+                assert_fails!((BTreeMap::from([("apple", 42)])).$assertion(&[] as &[i32]),
                     expected it "to contain exactly the values <[ ]>"
                     but it "was <[ \"apple\" => 42 ]>, which additionally has 1 of <42>");
             }
 
             #[test]
             fn contains_exactly_values_fails_for_map_with_lower_multiplicity() {
-                assert_fails!((HashMap::from([("apple", 42)])).contains_exactly_values(&[42, 42, 42]),
+                assert_fails!((HashMap::from([("apple", 42)])).$assertion(&[42, 42, 42]),
                     expected it "to contain exactly the values <[ 42, 42, 42 ]>"
                     but it "was <[ \"apple\" => 42 ]>, which lacks 2 of <42>");
             }
@@ -701,7 +701,7 @@ mod tests {
             #[test]
             fn contains_exactly_values_fails_for_map_with_higher_multiplicity() {
                 assert_fails!((BTreeMap::from([("apple", 42), ("banana", 42), ("cherry", 42)]))
-                    .contains_exactly_values(&[42]),
+                    .$assertion(&[42]),
                     expected it "to contain exactly the values <[ 42 ]>"
                     but it "was <[ \"apple\" => 42, \"banana\" => 42, \"cherry\" => 42 ]>, \
                         which additionally has 2 of <42>");
@@ -709,11 +709,26 @@ mod tests {
 
             #[test]
             fn contains_exactly_values_fails_for_map_with_multiple_missing_and_superfluous_values() {
-                assert_fails!((BTreeMap::from([("apple", 42), ("banana", 43), ("cherry", 44)]))
-                    .contains_exactly_values(&[41, 42, 45]),
-                    expected it "to contain exactly the values <[ 41, 42, 45 ]>"
-                    but it "was <[ \"apple\" => 42, \"banana\" => 43, \"cherry\" => 44 ]>, \
-                        which lacks 1 of <41>, 1 of <45> and additionally has 1 of <43>, 1 of <44>");
+                let map = BTreeMap::from([("apple", 42), ("banana", 43), ("cherry", 44)]);
+                let start = regex::escape(
+                    "expected: <map> to contain exactly the values <[ 41, 42, 45 ]>\n\
+                    but:      it was <[ \"apple\" => 42, \"banana\" => 43, \"cherry\" => 44 ]>, \
+                    which lacks ");
+                let lacking_order_1 = regex::escape("1 of <41>, 1 of <45>");
+                let lacking_order_2 = regex::escape("1 of <45>, 1 of <41>");
+                let additional_order_1 = regex::escape("1 of <43>, 1 of <44>");
+                let additional_order_2 = regex::escape("1 of <44>, 1 of <43>");
+                let regex = regex::Regex::new(&format!(
+                    "^{}({}|{}) and additionally has ({}|{})$",
+                    start,
+                    lacking_order_1,
+                    lacking_order_2,
+                    additional_order_1,
+                    additional_order_2
+                )).unwrap();
+
+                assert_that!(|| assert_that!(map).$assertion(&[41, 42, 45]))
+                    .panics_with_message_matching(|message| regex.is_match(message));
             }
         }
     }
