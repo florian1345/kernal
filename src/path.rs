@@ -10,7 +10,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with a [Path]
-/// argument.
+/// argument (or, more generally, an argument that implements `AsRef<Path>`).
 ///
 /// Examples:
 ///
