@@ -27,15 +27,15 @@ pub trait PathAssertions {
 
     /// Asserts that the tested path points at an existing entity and the metadata is accessible.
     ///
-    /// In the case that the metadata is not accessible (e.g. because of a permission error or
-    /// broken symbolic link), both [PathAssertions::does_not_exist] and this method will fail.
+    /// In the case that the metadata is not accessible (e.g. because of a permission error), both
+    /// [PathAssertions::does_not_exist] and this method will fail.
     fn exists(self) -> Self;
 
     /// Asserts that the tested path does not point at an existing entity, but the metadata is
     /// accessible.
     ///
-    /// In the case that the metadata is not accessible (e.g. because of a permission error or
-    /// broken symbolic link), both [PathAssertions::exist] and this method will fail.
+    /// In the case that the metadata is not accessible (e.g. because of a permission error), both
+    /// [PathAssertions::exists] and this method will fail.
     fn does_not_exist(self) -> Self;
 
     /// Asserts that the tested path is absolute, i.e. it is independent of the current directory.
@@ -49,15 +49,15 @@ pub trait PathAssertions {
     /// Asserts that the tested path exists on the disk, the metadata is accessible, and it is
     /// pointing at a regular file or a symlink to such a file.
     ///
-    /// In the case that the metadata is not accessible (e.g. because of a permission error or
-    /// broken symbolic link), [PathAssertions::is_dir] and this method will fail.
+    /// In the case that the metadata is not accessible (e.g. because of a permission error),
+    /// [PathAssertions::is_dir] and this method will fail.
     fn is_file(self) -> Self;
 
     /// Asserts that the tested path exists on the disk, the metadata is accessible, and it is
     /// pointing directly at a regular file without any symlinks.
     ///
-    /// In the case that the metadata is not accessible (e.g. because of a permission error or
-    /// broken symbolic link), [PathAssertions::is_non_symlink_dir], [PathAssertions::is_symlink],
+    /// In the case that the metadata is not accessible (e.g. because of a permission error),
+    /// [PathAssertions::is_non_symlink_dir], [PathAssertions::is_symlink],
     /// and this method will fail.
     fn is_non_symlink_file(self) -> Self;
 
@@ -79,9 +79,8 @@ pub trait PathAssertions {
     /// Asserts that the tested path exists on the disk, the metadata is accessible, and it is
     /// pointing at a symbolic link.
     ///
-    /// In the case that the metadata is not accessible (e.g. because of a permission error or
-    /// broken symbolic link), [PathAssertions::is_file], [PathAssertions::is_dir] and this method
-    /// will fail.
+    /// In the case that the metadata is not accessible (e.g. because of a permission error or),
+    /// [PathAssertions::is_file], [PathAssertions::is_dir] and this method will fail.
     fn is_symlink(self) -> Self;
 
     /// Asserts that the tested path exists on the disk, the metadata is accessible, and it is not
