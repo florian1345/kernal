@@ -706,36 +706,6 @@ mod tests {
                 .message());
     }
 
-    fn assert_fails_for_broken_symlink<T>(
-        assertion: impl FnOnce(AssertThat<TempSymlink<PathBuf>>) -> T + UnwindSafe,
-        expected_it: &str,
-        reason: &str
-    ) {
-        let symlink = TempSymlink::new_broken().unwrap();
-        let but_it =
-            format!("was <{}>, {}", symlink.as_ref().display(), reason);
-
-        assert_that!(|| assertion(assert_that!(symlink)))
-            .panics_with_message(Failure::from_expression("symlink")
-                .expected_it(expected_it)
-                .but_it(but_it)
-                .message())
-    }
-
-    fn assert_fails_for_broken_symlink_on_metadata<T>(
-        assertion: impl FnOnce(AssertThat<TempSymlink<PathBuf>>) -> T + UnwindSafe,
-        expected_it: &str
-    ) {
-        assert_fails_for_broken_symlink(assertion, expected_it, "whose metadata cannot be accessed")
-    }
-
-    fn assert_fails_for_broken_symlink_on_entity<T>(
-        assertion: impl FnOnce(AssertThat<TempSymlink<PathBuf>>) -> T + UnwindSafe,
-        expected_it: &str
-    ) {
-        assert_fails_for_broken_symlink(assertion, expected_it, "which cannot be opened")
-    }
-
     // TODO typedef `impl AsRef<Path> + RefUnwindSafe` once stable
     //  https://github.com/rust-lang/rust/issues/63063
 
@@ -840,11 +810,6 @@ mod tests {
     }
 
     #[test]
-    fn exists_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_metadata(|it| it.exists(), "to exist");
-    }
-
-    #[test]
     fn does_not_exist_passes_for_non_existing_file() {
         assert_that!("/some/path/that/hopefully/does/not/exist").does_not_exist();
     }
@@ -853,11 +818,6 @@ mod tests {
     fn does_not_exist_fails_for_existing_file(#[case] entity: impl AsRef<Path> + RefUnwindSafe) {
         assert_fails_and_was_path(|| assert_that!(&entity).does_not_exist(),
             "&entity", "not to exist", &entity, "which does exist");
-    }
-
-    #[test]
-    fn does_not_exist_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_metadata(|it| it.does_not_exist(), "not to exist");
     }
 
     #[test]
@@ -903,11 +863,6 @@ mod tests {
         assert_fails_non_existing(|it| it.is_file(), "to point to a regular file");
     }
 
-    #[test]
-    fn is_file_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_metadata(|it| it.is_file(),
-            "to point to a regular file");
-    }
 
     #[test]
     fn is_non_symlink_file_passes_for_file() {
@@ -957,11 +912,6 @@ mod tests {
     #[test]
     fn is_dir_fails_for_non_existing_path() {
         assert_fails_non_existing(|it| it.is_dir(), "to point to a directory");
-    }
-
-    #[test]
-    fn is_dir_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_metadata(|it| it.is_dir(), "to point to a directory");
     }
 
     #[test]
@@ -1308,13 +1258,6 @@ mod tests {
             "to point to a file with given content");
     }
 
-    #[test]
-    fn is_file_with_content_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_entity(
-            |it| it.is_file_with_content("anything"),
-            "to point to a file with given content");
-    }
-
     #[apply(file_and_symlink_file)]
     fn is_empty_file_passes(#[case] file: impl AsRef<Path> + RefUnwindSafe) {
         assert_that!(file).is_empty_file();
@@ -1350,12 +1293,6 @@ mod tests {
     }
 
     #[test]
-    fn is_empty_file_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_entity(|it| it.is_empty_file(),
-            "to point to an empty file");
-    }
-
-    #[test]
     fn is_non_empty_file_passes_for_file_with_content() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"not empty\n").unwrap();
@@ -1378,12 +1315,6 @@ mod tests {
     #[test]
     fn is_non_empty_file_fails_for_non_existing_path() {
         assert_fails_non_existing(|it| it.is_non_empty_file(), "to point to a non-empty file");
-    }
-
-    #[test]
-    fn is_non_empty_file_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_entity(|it| it.is_non_empty_file(),
-            "to point to a non-empty file");
     }
 
     #[apply(dir_and_symlink_dir)]
@@ -1454,24 +1385,6 @@ mod tests {
     }
 
     #[rstest]
-    #[case::is_empty_dir(|it: AssertThat<TempSymlink<PathBuf>>| it.is_empty_dir())]
-    #[case::is_non_empty_dir(|it: AssertThat<TempSymlink<PathBuf>>| it.is_non_empty_dir())]
-    fn is_empty_or_non_empty_dir_fails_with_broken_symlink<AssertionT>(
-        #[case] assertion: AssertionT)
-    where
-        AssertionT: FnOnce(AssertThat<TempSymlink<PathBuf>>) -> AssertThat<TempSymlink<PathBuf>>
-            + UnwindSafe
-    {
-        // It seems at least on some platforms, broken symlinks are reported as "not a directory".
-        // I do not want to assert this as it seems another error may be more appropriate, hence we
-        // just check that it fails.
-
-        let symlink = TempSymlink::new_broken().unwrap();
-
-        assert_that!(|| assertion(assert_that!(symlink))).panics();
-    }
-
-    #[rstest]
     #[case::empty("")]
     #[case::self_dir(".")]
     #[case::parent_dir("..")]
@@ -1511,11 +1424,6 @@ mod tests {
         assert_fails_non_existing(|it| it.to_content(), "to be readable");
     }
 
-    #[test]
-    fn to_content_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_entity(|it| it.to_content(), "to be readable");
-    }
-
     #[rstest]
     #[case::empty("")]
     #[case::utf8("some data")]
@@ -1549,9 +1457,29 @@ mod tests {
         assert_fails_non_existing(|it| it.to_content_string(), "to be readable");
     }
 
-    #[test]
-    fn to_content_string_fails_with_broken_symlink() {
-        assert_fails_for_broken_symlink_on_entity(|it| it.to_content_string(), "to be readable");
+    #[rstest]
+    #[case::exists(AssertThat::exists)]
+    #[case::is_file(AssertThat::is_file)]
+    #[case::is_non_symlink_file(AssertThat::is_non_symlink_file)]
+    #[case::is_dir(AssertThat::is_dir)]
+    #[case::is_non_symlink_dir(AssertThat::is_non_symlink_dir)]
+    #[case::is_non_symlink(AssertThat::is_non_symlink)]
+    #[case::is_file_with_content(|it: AssertThat<TempSymlink<PathBuf>>| it.is_file_with_content("anything"))]
+    #[case::is_empty_file(AssertThat::is_empty_file)]
+    #[case::is_non_empty_file(AssertThat::is_non_empty_file)]
+    #[case::is_empty_dir(AssertThat::is_empty_dir)]
+    #[case::is_non_empty_dir(AssertThat::is_non_empty_dir)]
+    #[case::to_content(AssertThat::to_content)]
+    #[case::to_content_string(AssertThat::to_content_string)]
+    fn accessing_assertions_fail_for_broken_symlink<AssertT, ResultT>(#[case] assertion: AssertT)
+    where
+        AssertT: FnOnce(AssertThat<TempSymlink<PathBuf>>) -> ResultT
+        + UnwindSafe
+    {
+        // Unfortunately, handling of broken symlinks seems to be platform-dependent, so we just
+        // assert that they fail.
+
+        assert_that!(|| assertion(assert_that!(TempSymlink::new_broken().unwrap()))).panics();
     }
 
 }
