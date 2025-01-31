@@ -17,6 +17,10 @@ categories = [ "development-tools::testing" ]
 
 [dev-dependencies]
 criterion = "0.5"
+rstest = "0.24.0"
+rstest_reuse = "0.7.0"
+symlink = "0.1.0"
+tempfile = "3.16.0"
 
 [profile.bench]
 opt-level = 3

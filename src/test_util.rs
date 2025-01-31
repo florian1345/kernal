@@ -4,7 +4,7 @@ use crate::{assert_that, Failure};
 use crate::panic::PanicAssertions;
 
 pub(crate) fn assert_fails_do<F: FnOnce() -> () + UnwindSafe>(
-        assertion: F, expression: &str, expected_it: &str, but_it: impl Into<String>) {
+        assertion: F, expression: &str, expected_it: impl Into<String>, but_it: impl Into<String>) {
     let expected_message = Failure::from_expression(expression)
         .expected_it(expected_it)
         .but_it(but_it)
@@ -37,16 +37,17 @@ pub(crate) fn assert_fails_do<F: FnOnce() -> () + UnwindSafe>(
 ///   `is_equal_to`.
 /// * args: A parameter list to supply to the assertion expected to fail. In the example, this would
 ///   be `2`
-/// * $expected_it: A string literal containing the expected part of the error message that comes
-///   after `expected: <...> `. The first part of this line is asserted to be as the `Failure`
-///   struct defines, with appropriate expression text. In the example, this would be
-///   `"to equal <2>"`.
-/// * $but_it: A string literal containing the expected part of the error message that comes
-///   after `but:      it <...> `. In the example, this would be `"was <1>"`.
+/// * $expected_it: A string literal/parenthesized expression containing the expected part of the
+///   error message that comes after `expected: <...> `. The first part of this line is asserted to
+///   be as the `Failure` struct defines, with appropriate expression text. In the example, this
+///   would be `"to equal <2>"`.
+/// * $but_it: A string literal/parenthesized expression containing the expected part of the error
+///   message that comes after `but:      it <...> `. In the example, this would be `"was <1>"`.
 #[macro_export]
 macro_rules! assert_fails {
     (( $input:expr ) . $assertion:ident ( $( $args:expr ),* ),
             expected it $expected_it:tt but it $but_it:tt) => {
+        #[allow(unused_parens)]
         $crate::test_util::assert_fails_do(
             || { $crate::assert_that!($input).$assertion($( $args, )*); },
             stringify!($input),
