@@ -123,6 +123,7 @@ pub mod option;
 pub mod panic;
 pub mod partial_eq;
 pub mod partial_ord;
+pub mod path;
 pub mod pointer;
 pub mod prelude;
 pub mod result;

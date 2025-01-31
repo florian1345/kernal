@@ -33,6 +33,7 @@ pub use crate::option::{OptionAssertions, OptionPartialEqAssertions, OwnedOption
 pub use crate::panic::PanicAssertions;
 pub use crate::partial_eq::PartialEqAssertions;
 pub use crate::partial_ord::PartialOrdAssertions;
+pub use crate::path::PathAssertions;
 pub use crate::pointer::PointerAssertions;
 pub use crate::result::{
     OwnedResultAssertions,
