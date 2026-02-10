@@ -1,13 +1,13 @@
 //! Contains assertions for [Path]s. See [PathAssertions] for more details.
 
-use crate::{AssertThat, AssertThatData, Failure};
-
 use std::ffi::OsStr;
 use std::fmt::Display;
 use std::fs::{self, Metadata, ReadDir};
 use std::io;
 use std::io::ErrorKind;
 use std::path::Path;
+
+use crate::{AssertThat, AssertThatData, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with a [Path]
 /// argument (or, more generally, an argument that implements `AsRef<Path>`).
@@ -24,7 +24,6 @@ use std::path::Path;
 ///     .does_not_exist();
 /// ```
 pub trait PathAssertions {
-
     /// Asserts that the tested path points at an existing entity and the metadata is accessible.
     ///
     /// In the case that the metadata is not accessible (e.g. because of a permission error), both
@@ -161,13 +160,16 @@ pub trait PathAssertions {
 }
 
 impl Failure {
-
     fn but_it_was_path<T: AsRef<Path>>(
         self,
         assert_that: &AssertThat<T>,
-        and: impl Display
+        and: impl Display,
     ) -> Failure {
-        self.but_it(format!("was <{}>, {}", assert_that.data().as_ref().display(), and))
+        self.but_it(format!(
+            "was <{}>, {}",
+            assert_that.data().as_ref().display(),
+            and
+        ))
     }
 }
 
@@ -175,26 +177,28 @@ impl Failure {
 enum ExpectedFileType {
     File,
     Dir,
-    Symlink
+    Symlink,
 }
 
 fn assert_file_kind<T: AsRef<Path>>(
     assert_that: AssertThat<T>,
     get_metadata: impl FnOnce(&Path) -> io::Result<Metadata>,
     expected_file_types: &[ExpectedFileType],
-    expected_it: &str
+    expected_it: &str,
 ) -> AssertThat<T> {
     let path = assert_that.data().as_ref();
     let metadata = get_metadata(path);
-    let fail = |reason| Failure::new(&assert_that)
-        .expected_it(expected_it)
-        .but_it_was_path(&assert_that, reason)
-        .fail();
+    let fail = |reason| {
+        Failure::new(&assert_that)
+            .expected_it(expected_it)
+            .but_it_was_path(&assert_that, reason)
+            .fail()
+    };
 
     let file_type = match metadata.as_ref().map(Metadata::file_type) {
         Ok(file_type) => file_type,
         Err(error) if error.kind() == ErrorKind::NotFound => fail("which does not exist"),
-        Err(_) => fail("whose metadata cannot be accessed")
+        Err(_) => fail("whose metadata cannot be accessed"),
     };
 
     if file_type.is_file() && !expected_file_types.contains(&ExpectedFileType::File) {
@@ -218,23 +222,34 @@ fn assert_has_segment<T: AsRef<Path>>(
     assert_that: AssertThat<T>,
     get_actual_segment: impl Fn(&Path) -> Option<&OsStr>,
     expected_segment: impl AsRef<OsStr>,
-    segment_name: &str
+    segment_name: &str,
 ) -> AssertThat<T> {
     let expected_segment = expected_segment.as_ref();
-    let fail = |reason| Failure::new(&assert_that)
-        .expected_it(format!("to have {} <{}>", segment_name, expected_segment.to_string_lossy()))
-        .but_it_was_path(&assert_that, reason)
-        .fail();
+    let fail = |reason| {
+        Failure::new(&assert_that)
+            .expected_it(format!(
+                "to have {} <{}>",
+                segment_name,
+                expected_segment.to_string_lossy()
+            ))
+            .but_it_was_path(&assert_that, reason)
+            .fail()
+    };
 
     match get_actual_segment(assert_that.data().as_ref()) {
-        Some(actual_segment) =>
+        Some(actual_segment) => {
             if actual_segment == expected_segment {
                 assert_that
             }
             else {
-                fail(format!("which has {} <{}>", segment_name, actual_segment.to_string_lossy()))
-            },
-        None => fail(format!("which has no {}", segment_name))
+                fail(format!(
+                    "which has {} <{}>",
+                    segment_name,
+                    actual_segment.to_string_lossy()
+                ))
+            }
+        },
+        None => fail(format!("which has no {}", segment_name)),
     }
 }
 
@@ -242,23 +257,27 @@ fn assert_does_not_have_segment<T: AsRef<Path>>(
     assert_that: AssertThat<T>,
     get_actual_segment: impl Fn(&Path) -> Option<&OsStr>,
     expected_segment: impl AsRef<OsStr>,
-    segment_name: &str
+    segment_name: &str,
 ) -> AssertThat<T> {
     let expected_segment = expected_segment.as_ref();
 
     match get_actual_segment(assert_that.data().as_ref()) {
-        Some(actual_segment) =>
+        Some(actual_segment) => {
             if actual_segment == expected_segment {
                 Failure::new(&assert_that)
                     .expected_it(format!(
-                        "not to have {} <{}>", segment_name, expected_segment.to_string_lossy()))
+                        "not to have {} <{}>",
+                        segment_name,
+                        expected_segment.to_string_lossy()
+                    ))
                     .but_it_was_path(&assert_that, "which does")
                     .fail()
             }
             else {
                 assert_that
-            },
-        None => assert_that
+            }
+        },
+        None => assert_that,
     }
 }
 
@@ -266,20 +285,24 @@ fn assert_is_dir_satisfying<T: AsRef<Path>>(
     assert_that: AssertThat<T>,
     validate_dir: impl Fn(ReadDir) -> bool,
     expected_it: &str,
-    reason_on_invalid: &str
+    reason_on_invalid: &str,
 ) -> AssertThat<T> {
-    let fail = |reason| Failure::new(&assert_that)
-        .expected_it(expected_it)
-        .but_it_was_path(&assert_that, reason)
-        .fail();
+    let fail = |reason| {
+        Failure::new(&assert_that)
+            .expected_it(expected_it)
+            .but_it_was_path(&assert_that, reason)
+            .fail()
+    };
 
-    let read_dir = assert_that.data().as_ref().read_dir().unwrap_or_else(|error|
-        match error.kind() {
+    let read_dir = assert_that
+        .data()
+        .as_ref()
+        .read_dir()
+        .unwrap_or_else(|error| match error.kind() {
             ErrorKind::NotFound => fail("which does not exist"),
             ErrorKind::NotADirectory => fail("which is not a directory"),
-            _ => fail("which cannot be opened")
-        }
-    );
+            _ => fail("which cannot be opened"),
+        });
 
     if !validate_dir(read_dir) {
         fail(reason_on_invalid);
@@ -289,49 +312,51 @@ fn assert_is_dir_satisfying<T: AsRef<Path>>(
 }
 
 fn read_content_or_fail<T: AsRef<Path>>(assert_that: &AssertThat<T>, expected_it: &str) -> Vec<u8> {
-    fs::read(assert_that.data())
-        .unwrap_or_else(|err| {
-            let reason = if err.kind() == ErrorKind::NotFound {
-                "which does not exist"
-            }
-            else {
-                "which cannot be opened"
-            };
+    fs::read(assert_that.data()).unwrap_or_else(|err| {
+        let reason = if err.kind() == ErrorKind::NotFound {
+            "which does not exist"
+        }
+        else {
+            "which cannot be opened"
+        };
 
-            Failure::new(assert_that)
-                .expected_it(expected_it)
-                .but_it_was_path(assert_that, reason)
-                .fail()
-        })
+        Failure::new(assert_that)
+            .expected_it(expected_it)
+            .but_it_was_path(assert_that, reason)
+            .fail()
+    })
 }
 
 impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
-
     fn exists(self) -> Self {
         let path = self.data().as_ref();
-        let fail = |reason| Failure::new(&self)
-            .expected_it("to exist")
-            .but_it_was_path(&self, reason)
-            .fail();
+        let fail = |reason| {
+            Failure::new(&self)
+                .expected_it("to exist")
+                .but_it_was_path(&self, reason)
+                .fail()
+        };
 
         match path.try_exists() {
             Ok(true) => self,
             Ok(false) => fail("which does not exist"),
-            Err(_) => fail("whose metadata cannot be accessed")
+            Err(_) => fail("whose metadata cannot be accessed"),
         }
     }
 
     fn does_not_exist(self) -> Self {
         let path = self.data().as_ref();
-        let fail = |reason| Failure::new(&self)
-            .expected_it("not to exist")
-            .but_it_was_path(&self, reason)
-            .fail();
+        let fail = |reason| {
+            Failure::new(&self)
+                .expected_it("not to exist")
+                .but_it_was_path(&self, reason)
+                .fail()
+        };
 
         match path.try_exists() {
             Ok(false) => self,
             Ok(true) => fail("which does exist"),
-            Err(_) => fail("whose metadata cannot be accessed")
+            Err(_) => fail("whose metadata cannot be accessed"),
         }
     }
 
@@ -362,45 +387,57 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
     }
 
     fn is_file(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::metadata,
             &[ExpectedFileType::File],
-            "to point to a regular file")
+            "to point to a regular file",
+        )
     }
 
     fn is_non_symlink_file(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::symlink_metadata,
             &[ExpectedFileType::File],
-            "to point to a regular file without symbolic link")
+            "to point to a regular file without symbolic link",
+        )
     }
 
     fn is_dir(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::metadata,
             &[ExpectedFileType::Dir],
-            "to point to a directory")
+            "to point to a directory",
+        )
     }
 
     fn is_non_symlink_dir(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::symlink_metadata,
             &[ExpectedFileType::Dir],
-            "to point to a directory without symbolic link")
+            "to point to a directory without symbolic link",
+        )
     }
 
     fn is_symlink(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::symlink_metadata,
             &[ExpectedFileType::Symlink],
-            "to point to a symbolic link")
+            "to point to a symbolic link",
+        )
     }
 
     fn is_non_symlink(self) -> Self {
-        assert_file_kind(self,
+        assert_file_kind(
+            self,
             Path::symlink_metadata,
             &[ExpectedFileType::File, ExpectedFileType::Dir],
-            "not to point to a symbolic link")
+            "not to point to a symbolic link",
+        )
     }
 
     fn has_file_name(self, file_name: impl AsRef<OsStr>) -> Self {
@@ -498,21 +535,27 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
         let expected_content = expected_content.as_ref();
 
         if content != expected_content {
-            match (std::str::from_utf8(&content), std::str::from_utf8(expected_content)) {
-                (Ok(content), Ok(expected_content)) => {
-                    Failure::new(&self)
-                        .expected_it(format!("to point to a file with content <{}>",
-                            expected_content.escape_debug()))
-                        .but_it_was_path(&self,
-                            format!("which has content <{}>", content.escape_debug()))
-                        .fail()
-                },
-                _ => {
-                    Failure::new(&self)
-                        .expected_it(format!("to point to a file with content <{:?}>", expected_content))
-                        .but_it_was_path(&self, format!("which has content <{:?}>", content))
-                        .fail()
-                }
+            match (
+                std::str::from_utf8(&content),
+                std::str::from_utf8(expected_content),
+            ) {
+                (Ok(content), Ok(expected_content)) => Failure::new(&self)
+                    .expected_it(format!(
+                        "to point to a file with content <{}>",
+                        expected_content.escape_debug()
+                    ))
+                    .but_it_was_path(
+                        &self,
+                        format!("which has content <{}>", content.escape_debug()),
+                    )
+                    .fail(),
+                _ => Failure::new(&self)
+                    .expected_it(format!(
+                        "to point to a file with content <{:?}>",
+                        expected_content
+                    ))
+                    .but_it_was_path(&self, format!("which has content <{:?}>", content))
+                    .fail(),
             }
         }
 
@@ -522,10 +565,12 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
     fn is_empty_file(self) -> Self {
         let expected_it = "to point to an empty file";
         let content = read_content_or_fail(&self, expected_it);
-        let fail = |reason| Failure::new(&self)
-            .expected_it(expected_it)
-            .but_it_was_path(&self, reason)
-            .fail();
+        let fail = |reason| {
+            Failure::new(&self)
+                .expected_it(expected_it)
+                .but_it_was_path(&self, reason)
+                .fail()
+        };
 
         if !content.is_empty() {
             if let Ok(content) = std::str::from_utf8(&content) {
@@ -554,26 +599,35 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
     }
 
     fn is_empty_dir(self) -> Self {
-        assert_is_dir_satisfying(self,
+        assert_is_dir_satisfying(
+            self,
             |mut read_dir| read_dir.next().is_none(),
             "to point to an empty directory",
-            "which is not empty")
+            "which is not empty",
+        )
     }
 
     fn is_non_empty_dir(self) -> Self {
-        assert_is_dir_satisfying(self,
+        assert_is_dir_satisfying(
+            self,
             |mut read_dir| read_dir.next().is_some(),
             "to point to a non-empty directory",
-            "which is empty")
+            "which is empty",
+        )
     }
 
     fn to_string(self) -> AssertThat<String> {
-        let data = self.data.as_ref().to_str()
+        let data = self
+            .data
+            .as_ref()
+            .to_str()
             .map(str::to_owned)
-            .unwrap_or_else(|| Failure::new(&self)
-                .expected_it("to be convertible to a string")
-                .but_it_was_path(&self, "which is not")
-                .fail());
+            .unwrap_or_else(|| {
+                Failure::new(&self)
+                    .expected_it("to be convertible to a string")
+                    .but_it_was_path(&self, "which is not")
+                    .fail()
+            });
         let expression = format!("<{}> as string", self.expression);
 
         AssertThat::new(data, expression)
@@ -588,11 +642,12 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
 
     fn to_content_string(self) -> AssertThat<String> {
         let content = read_content_or_fail(&self, "to be readable");
-        let content = String::from_utf8(content)
-            .unwrap_or_else(|_| Failure::new(&self)
+        let content = String::from_utf8(content).unwrap_or_else(|_| {
+            Failure::new(&self)
                 .expected_it("to contain valid UTF-8")
                 .but_it_was_path(&self, "which contains non-UTF-8 data")
-                .fail());
+                .fail()
+        });
         let expression = format!("content of <{}> as string", self.expression);
 
         AssertThat::new(content, expression)
@@ -602,35 +657,32 @@ impl<T: AsRef<Path>> PathAssertions for AssertThat<T> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-
-    use crate::assert_fails;
-    use crate::prelude::*;
-
-    use std::{io, path};
     use std::fs::File;
     use std::io::Write;
     use std::panic::{RefUnwindSafe, UnwindSafe};
     use std::path::PathBuf;
+    use std::{io, path};
+
     use rstest::rstest;
-
     use rstest_reuse::{apply, template};
-
     use tempfile::{NamedTempFile, TempDir};
+
+    use super::*;
+    use crate::assert_fails;
+    use crate::prelude::*;
 
     const NON_EXISTING_PATH: &str = "/some/path/that/hopefully/does/not/exist";
 
     struct TempSymlink<DestT> {
         _symlink_dest: DestT,
         _target_dir: TempDir,
-        symlink_path: PathBuf
+        symlink_path: PathBuf,
     }
 
     impl<DestT: AsRef<Path>> TempSymlink<DestT> {
-
         fn new(
             create_dest: impl FnOnce() -> io::Result<DestT>,
-            create_symlink: impl FnOnce(&DestT, &Path) -> io::Result<()>
+            create_symlink: impl FnOnce(&DestT, &Path) -> io::Result<()>,
         ) -> io::Result<TempSymlink<DestT>> {
             let symlink_dest = create_dest()?;
             let target_dir = TempDir::new()?;
@@ -640,40 +692,39 @@ mod tests {
             Ok(TempSymlink {
                 _symlink_dest: symlink_dest,
                 _target_dir: target_dir,
-                symlink_path
+                symlink_path,
             })
         }
     }
 
     impl TempSymlink<NamedTempFile> {
-
         fn new_file() -> io::Result<TempSymlink<NamedTempFile>> {
             TempSymlink::new(
                 || NamedTempFile::new(),
-                |file, symlink| symlink::symlink_file(file, symlink))
+                |file, symlink| symlink::symlink_file(file, symlink),
+            )
         }
     }
 
     impl TempSymlink<TempDir> {
-
         fn new_dir() -> io::Result<TempSymlink<TempDir>> {
             TempSymlink::new(
                 || TempDir::new(),
-                |file, symlink| symlink::symlink_dir(file, symlink))
+                |file, symlink| symlink::symlink_dir(file, symlink),
+            )
         }
     }
 
     impl TempSymlink<PathBuf> {
-
         fn new_broken() -> io::Result<TempSymlink<PathBuf>> {
             TempSymlink::new(
                 || Ok(PathBuf::from(NON_EXISTING_PATH)),
-                |file, symlink| symlink::symlink_file(file, symlink))
+                |file, symlink| symlink::symlink_file(file, symlink),
+            )
         }
     }
 
     impl<DestT: AsRef<Path>> AsRef<Path> for TempSymlink<DestT> {
-
         fn as_ref(&self) -> &Path {
             &self.symlink_path
         }
@@ -684,25 +735,30 @@ mod tests {
         expression: &str,
         expected_it: &str,
         but_it_path: impl AsRef<Path>,
-        but_it_continuation: &str
+        but_it_continuation: &str,
     ) {
-        assert_that!(assertion)
-            .panics_with_message(Failure::from_expression(expression)
+        assert_that!(assertion).panics_with_message(
+            Failure::from_expression(expression)
                 .expected_it(expected_it)
-                .but_it(
-                    format!("was <{}>, {}", but_it_path.as_ref().display(), but_it_continuation))
-                .message());
+                .but_it(format!(
+                    "was <{}>, {}",
+                    but_it_path.as_ref().display(),
+                    but_it_continuation
+                ))
+                .message(),
+        );
     }
 
     fn assert_fails_non_existing<T>(
         assertion: impl FnOnce(AssertThat<&'static str>) -> T + UnwindSafe,
-        expected_it: &str
+        expected_it: &str,
     ) {
-        assert_that!(|| assertion(assert_that!(NON_EXISTING_PATH)))
-            .panics_with_message(Failure::from_expression("NON_EXISTING_PATH")
+        assert_that!(|| assertion(assert_that!(NON_EXISTING_PATH))).panics_with_message(
+            Failure::from_expression("NON_EXISTING_PATH")
                 .expected_it(expected_it)
                 .but_it(format!("was <{}>, which does not exist", NON_EXISTING_PATH))
-                .message());
+                .message(),
+        );
     }
 
     // TODO typedef `impl AsRef<Path> + RefUnwindSafe` once stable
@@ -753,7 +809,9 @@ mod tests {
     fn true_prefixes_with_unmatched_path(
         #[case] path: &str,
         #[case] prefix: &str,
-        #[case] unmatched_path: &str) {}
+        #[case] unmatched_path: &str,
+    ) {
+    }
 
     #[template]
     #[rstest]
@@ -780,7 +838,9 @@ mod tests {
     fn true_suffixes_with_unmatched_path(
         #[case] path: &str,
         #[case] suffix: &str,
-        #[case] unmatched_path: &str) {}
+        #[case] unmatched_path: &str,
+    ) {
+    }
 
     #[template]
     #[rstest]
@@ -798,7 +858,7 @@ mod tests {
 
     #[apply(existing_entities)]
     fn exists_passes_for_existing_symlink_to_directory(
-        #[case] entity: impl AsRef<Path> + RefUnwindSafe
+        #[case] entity: impl AsRef<Path> + RefUnwindSafe,
     ) {
         assert_that!(entity).exists();
     }
@@ -815,8 +875,13 @@ mod tests {
 
     #[apply(existing_entities)]
     fn does_not_exist_fails_for_existing_file(#[case] entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).does_not_exist(),
-            "&entity", "not to exist", &entity, "which does exist");
+        assert_fails_and_was_path(
+            || assert_that!(&entity).does_not_exist(),
+            "&entity",
+            "not to exist",
+            &entity,
+            "which does exist",
+        );
     }
 
     #[test]
@@ -842,8 +907,13 @@ mod tests {
     fn is_relative_fails_for_absolute_path() {
         let path = path::absolute("relative/path").unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&path).is_relative(),
-            "&path", "to be relative", &path, "which is absolute");
+        assert_fails_and_was_path(
+            || assert_that!(&path).is_relative(),
+            "&path",
+            "to be relative",
+            &path,
+            "which is absolute",
+        );
     }
 
     #[apply(file_and_symlink_file)]
@@ -853,15 +923,19 @@ mod tests {
 
     #[apply(dir_and_symlink_dir)]
     fn is_file_fails_for_dir(entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).is_file(),
-            "&entity", "to point to a regular file", &entity, "which points to a directory");
+        assert_fails_and_was_path(
+            || assert_that!(&entity).is_file(),
+            "&entity",
+            "to point to a regular file",
+            &entity,
+            "which points to a directory",
+        );
     }
 
     #[test]
     fn is_file_fails_for_non_existing_path() {
         assert_fails_non_existing(|it| it.is_file(), "to point to a regular file");
     }
-
 
     #[test]
     fn is_non_symlink_file_passes_for_file() {
@@ -874,27 +948,32 @@ mod tests {
     fn is_non_symlink_file_fails_for_dir() {
         let dir = TempDir::new().unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&dir).is_non_symlink_file(),
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_non_symlink_file(),
             "&dir",
             "to point to a regular file without symbolic link",
             &dir,
-            "which points to a directory");
+            "which points to a directory",
+        );
     }
 
     #[apply(symlink)]
     fn is_non_symlink_file_fails_for_symlink(entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).is_non_symlink_file(),
+        assert_fails_and_was_path(
+            || assert_that!(&entity).is_non_symlink_file(),
             "&entity",
             "to point to a regular file without symbolic link",
             &entity,
-            "which points to a symbolic link");
+            "which points to a symbolic link",
+        );
     }
 
     #[test]
     fn is_non_symlink_file_fails_for_non_existing_path() {
         assert_fails_non_existing(
             |it| it.is_non_symlink_file(),
-            "to point to a regular file without symbolic link");
+            "to point to a regular file without symbolic link",
+        );
     }
 
     #[apply(dir_and_symlink_dir)]
@@ -904,8 +983,13 @@ mod tests {
 
     #[apply(file_and_symlink_file)]
     fn is_dir_fails_for_file(entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).is_dir(),
-            "&entity", "to point to a directory", &entity, "which points to a regular file");
+        assert_fails_and_was_path(
+            || assert_that!(&entity).is_dir(),
+            "&entity",
+            "to point to a directory",
+            &entity,
+            "which points to a regular file",
+        );
     }
 
     #[test]
@@ -924,27 +1008,32 @@ mod tests {
     fn is_non_symlink_dir_fails_for_file() {
         let file = NamedTempFile::new().unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_non_symlink_dir(),
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_non_symlink_dir(),
             "&file",
             "to point to a directory without symbolic link",
             &file,
-            "which points to a regular file")
+            "which points to a regular file",
+        )
     }
 
     #[apply(symlink)]
     fn is_non_symlink_dir_fails_for_symlink(entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).is_non_symlink_dir(),
+        assert_fails_and_was_path(
+            || assert_that!(&entity).is_non_symlink_dir(),
             "&entity",
             "to point to a directory without symbolic link",
             &entity,
-            "which points to a symbolic link");
+            "which points to a symbolic link",
+        );
     }
 
     #[test]
     fn is_non_symlink_dir_fails_for_non_existing_path() {
         assert_fails_non_existing(
             |it| it.is_non_symlink_dir(),
-            "to point to a directory without symbolic link");
+            "to point to a directory without symbolic link",
+        );
     }
 
     #[rstest]
@@ -958,16 +1047,26 @@ mod tests {
     fn is_symlink_fails_for_non_symlink_file() {
         let file = NamedTempFile::new().unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_symlink(),
-            "&file", "to point to a symbolic link", &file, "which points to a regular file");
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_symlink(),
+            "&file",
+            "to point to a symbolic link",
+            &file,
+            "which points to a regular file",
+        );
     }
 
     #[test]
     fn is_symlink_fails_for_non_symlink_dir() {
         let dir = TempDir::new().unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&dir).is_symlink(),
-            "&dir", "to point to a symbolic link", &dir, "which points to a directory");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_symlink(),
+            "&dir",
+            "to point to a symbolic link",
+            &dir,
+            "which points to a directory",
+        );
     }
 
     #[test]
@@ -984,11 +1083,13 @@ mod tests {
 
     #[apply(symlink)]
     fn is_non_symlink_fails_for_symlink(#[case] entity: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&entity).is_non_symlink(),
+        assert_fails_and_was_path(
+            || assert_that!(&entity).is_non_symlink(),
             "&entity",
             "not to point to a symbolic link",
             &entity,
-            "which points to a symbolic link");
+            "which points to a symbolic link",
+        );
     }
 
     #[test]
@@ -1149,7 +1250,11 @@ mod tests {
     }
 
     #[apply(true_prefixes_with_unmatched_path)]
-    fn starts_with_path_passes(#[case] path: &str, #[case] prefix: &str, #[case] _unmatched_path: &str) {
+    fn starts_with_path_passes(
+        #[case] path: &str,
+        #[case] prefix: &str,
+        #[case] _unmatched_path: &str,
+    ) {
         assert_that!(path).starts_with_path(prefix);
     }
 
@@ -1169,7 +1274,7 @@ mod tests {
     fn does_not_start_with_path_fails(
         #[case] path: &str,
         #[case] prefix: &str,
-        #[case] unmatched_path: &str
+        #[case] unmatched_path: &str,
     ) {
         assert_fails!((path).does_not_start_with_path(prefix),
             expected it (format!("not to start with <{}>", prefix))
@@ -1177,7 +1282,11 @@ mod tests {
     }
 
     #[apply(true_suffixes_with_unmatched_path)]
-    fn ends_with_path_passes(#[case] path: &str, #[case] suffix: &str, #[case] _unmatched_path: &str) {
+    fn ends_with_path_passes(
+        #[case] path: &str,
+        #[case] suffix: &str,
+        #[case] _unmatched_path: &str,
+    ) {
         assert_that!(path).ends_with_path(suffix);
     }
 
@@ -1197,7 +1306,7 @@ mod tests {
     fn does_not_end_with_path_fails(
         #[case] path: &str,
         #[case] suffix: &str,
-        #[case] unmatched_path: &str
+        #[case] unmatched_path: &str,
     ) {
         assert_fails!((path).does_not_end_with_path(suffix),
             expected it (format!("not to end with <{}>", suffix))
@@ -1220,41 +1329,54 @@ mod tests {
     #[case::different_non_empty("file\ncontent", "expected\ncontent")]
     fn is_file_with_content_fails_for_different_utf8_content(
         #[case] file_content: &str,
-        #[case] expected_content: &str
+        #[case] expected_content: &str,
     ) {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(file_content.as_bytes()).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_file_with_content(expected_content),
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_file_with_content(expected_content),
             "&file",
-            &format!("to point to a file with content <{}>", expected_content.escape_debug()),
+            &format!(
+                "to point to a file with content <{}>",
+                expected_content.escape_debug()
+            ),
             &file,
-            &format!("which has content <{}>", file_content.escape_debug()));
+            &format!("which has content <{}>", file_content.escape_debug()),
+        );
     }
 
     #[test]
     fn is_file_with_content_fails_for_different_non_utf8_content() {
         let mut file = NamedTempFile::new().unwrap();
-        file.write_all(&[ 255, 254 ]).unwrap();
+        file.write_all(&[255, 254]).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_file_with_content(&[ 255, 253 ]),
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_file_with_content(&[255, 253]),
             "&file",
             "to point to a file with content <[255, 253]>",
             &file,
-            "which has content <[255, 254]>");
+            "which has content <[255, 254]>",
+        );
     }
 
     #[apply(dir_and_symlink_dir)]
     fn is_file_with_content_fails_for_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).is_file_with_content("anything"),
-            "&dir", "to point to a file with given content", &dir, "which cannot be opened");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_file_with_content("anything"),
+            "&dir",
+            "to point to a file with given content",
+            &dir,
+            "which cannot be opened",
+        );
     }
 
     #[test]
     fn is_file_with_content_fails_for_non_existing_path() {
         assert_fails_non_existing(
             |it| it.is_file_with_content("anything"),
-            "to point to a file with given content");
+            "to point to a file with given content",
+        );
     }
 
     #[apply(file_and_symlink_file)]
@@ -1267,23 +1389,38 @@ mod tests {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"not empty\n").unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_empty_file(),
-            "&file", "to point to an empty file", &file, "which has content <not empty\\n>");
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_empty_file(),
+            "&file",
+            "to point to an empty file",
+            &file,
+            "which has content <not empty\\n>",
+        );
     }
 
     #[test]
     fn is_empty_file_fails_for_file_with_non_utf8_content() {
         let mut file = NamedTempFile::new().unwrap();
-        file.write_all(&[ 255, 254 ]).unwrap();
+        file.write_all(&[255, 254]).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).is_empty_file(),
-            "&file", "to point to an empty file", &file, "which has content <[255, 254]>");
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_empty_file(),
+            "&file",
+            "to point to an empty file",
+            &file,
+            "which has content <[255, 254]>",
+        );
     }
 
     #[apply(dir_and_symlink_dir)]
     fn is_empty_file_fails_for_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).is_empty_file(),
-            "&dir", "to point to an empty file", &dir, "which cannot be opened");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_empty_file(),
+            "&dir",
+            "to point to an empty file",
+            &dir,
+            "which cannot be opened",
+        );
     }
 
     #[test]
@@ -1301,14 +1438,24 @@ mod tests {
 
     #[apply(file_and_symlink_file)]
     fn is_non_empty_file_fails_for_empty_file(#[case] file: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&file).is_non_empty_file(),
-            "&file", "to point to a non-empty file", &file, "which points to an empty file");
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_non_empty_file(),
+            "&file",
+            "to point to a non-empty file",
+            &file,
+            "which points to an empty file",
+        );
     }
 
     #[apply(dir_and_symlink_dir)]
     fn is_non_empty_file_fails_for_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).is_non_empty_file(),
-            "&dir", "to point to a non-empty file", &dir, "which cannot be opened");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_non_empty_file(),
+            "&dir",
+            "to point to a non-empty file",
+            &dir,
+            "which cannot be opened",
+        );
     }
 
     #[test]
@@ -1326,8 +1473,13 @@ mod tests {
         let dir = TempDir::new().unwrap();
         File::create(dir.path().join("file")).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&dir).is_empty_dir(),
-            "&dir", "to point to an empty directory", &dir, "which is not empty");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_empty_dir(),
+            "&dir",
+            "to point to an empty directory",
+            &dir,
+            "which is not empty",
+        );
     }
 
     #[test]
@@ -1335,14 +1487,24 @@ mod tests {
         let dir = TempDir::new().unwrap();
         fs::create_dir(dir.path().join("subdir")).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&dir).is_empty_dir(),
-            "&dir", "to point to an empty directory", &dir, "which is not empty");
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_empty_dir(),
+            "&dir",
+            "to point to an empty directory",
+            &dir,
+            "which is not empty",
+        );
     }
 
     #[apply(file_and_symlink_file)]
     fn is_empty_dir_fails_for_file(#[case] file: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&file).is_empty_dir(),
-            "&file", "to point to an empty directory", &file, "which is not a directory")
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_empty_dir(),
+            "&file",
+            "to point to an empty directory",
+            &file,
+            "which is not a directory",
+        )
     }
 
     #[test]
@@ -1352,8 +1514,13 @@ mod tests {
 
     #[apply(dir_and_symlink_dir)]
     fn is_non_empty_dir_fails_for_empty_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).is_non_empty_dir(),
-            "&dir", "to point to a non-empty directory", &dir, "which is empty")
+        assert_fails_and_was_path(
+            || assert_that!(&dir).is_non_empty_dir(),
+            "&dir",
+            "to point to a non-empty directory",
+            &dir,
+            "which is empty",
+        )
     }
 
     #[test]
@@ -1374,13 +1541,21 @@ mod tests {
 
     #[apply(file_and_symlink_file)]
     fn is_non_empty_dir_fails_for_file(#[case] file: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&file).is_non_empty_dir(),
-            "&file", "to point to a non-empty directory", &file, "which is not a directory")
+        assert_fails_and_was_path(
+            || assert_that!(&file).is_non_empty_dir(),
+            "&file",
+            "to point to a non-empty directory",
+            &file,
+            "which is not a directory",
+        )
     }
 
     #[test]
     fn is_non_empty_dir_fails_for_non_existing_path() {
-        assert_fails_non_existing(|it| it.is_non_empty_dir(), "to point to a non-empty directory");
+        assert_fails_non_existing(
+            |it| it.is_non_empty_dir(),
+            "to point to a non-empty directory",
+        );
     }
 
     #[rstest]
@@ -1414,8 +1589,13 @@ mod tests {
 
     #[apply(dir_and_symlink_dir)]
     fn to_content_fails_for_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).to_content(),
-            "&dir", "to be readable", &dir, "which cannot be opened")
+        assert_fails_and_was_path(
+            || assert_that!(&dir).to_content(),
+            "&dir",
+            "to be readable",
+            &dir,
+            "which cannot be opened",
+        )
     }
 
     #[test]
@@ -1439,16 +1619,26 @@ mod tests {
     #[test]
     fn to_content_string_does_not_work_for_non_utf8_file() {
         let mut file = NamedTempFile::new().unwrap();
-        file.write_all(&[ 255, 254, 253 ]).unwrap();
+        file.write_all(&[255, 254, 253]).unwrap();
 
-        assert_fails_and_was_path(|| assert_that!(&file).to_content_string(),
-            "&file", "to contain valid UTF-8", &file, "which contains non-UTF-8 data");
+        assert_fails_and_was_path(
+            || assert_that!(&file).to_content_string(),
+            "&file",
+            "to contain valid UTF-8",
+            &file,
+            "which contains non-UTF-8 data",
+        );
     }
 
     #[apply(dir_and_symlink_dir)]
     fn to_content_string_fails_for_directory(#[case] dir: impl AsRef<Path> + RefUnwindSafe) {
-        assert_fails_and_was_path(|| assert_that!(&dir).to_content_string(),
-            "&dir", "to be readable", &dir, "which cannot be opened")
+        assert_fails_and_was_path(
+            || assert_that!(&dir).to_content_string(),
+            "&dir",
+            "to be readable",
+            &dir,
+            "which cannot be opened",
+        )
     }
 
     #[test]
@@ -1472,13 +1662,11 @@ mod tests {
     #[case::to_content_string(AssertThat::to_content_string)]
     fn accessing_assertions_fail_for_broken_symlink<AssertT, ResultT>(#[case] assertion: AssertT)
     where
-        AssertT: FnOnce(AssertThat<TempSymlink<PathBuf>>) -> ResultT
-        + UnwindSafe
+        AssertT: FnOnce(AssertThat<TempSymlink<PathBuf>>) -> ResultT + UnwindSafe,
     {
         // Unfortunately, handling of broken symlinks seems to be platform-dependent, so we just
         // assert that they fail.
 
         assert_that!(|| assertion(assert_that!(TempSymlink::new_broken().unwrap()))).panics();
     }
-
 }

@@ -142,21 +142,17 @@ pub(crate) mod test_util;
 /// [prelude] module.
 pub struct AssertThat<T> {
     pub(crate) data: T,
-    pub(crate) expression: String
+    pub(crate) expression: String,
 }
 
 impl<T> AssertThat<T> {
-
     /// Creates a new assert-that instance for the given tested `data` and with the given
     /// `expression` string representing the actual code which evaluated to the tested data. This
     /// may also be a small description (such as `chars of <my_string>`) in case assertions are
     /// transformed.
     #[must_use]
     pub fn new(data: T, expression: String) -> AssertThat<T> {
-        AssertThat {
-            data,
-            expression
-        }
+        AssertThat { data, expression }
     }
 }
 
@@ -183,11 +179,10 @@ macro_rules! assert_that {
 pub struct Failure {
     expression: String,
     expected_it: Option<String>,
-    but_it: Option<String>
+    but_it: Option<String>,
 }
 
 impl Failure {
-
     /// Creates a new failure that takes the possible information from the [AssertThat] on whose
     /// data the failed assertion is run.
     #[must_use]
@@ -202,7 +197,7 @@ impl Failure {
         Failure {
             expression: expression.into(),
             expected_it: None,
-            but_it: None
+            but_it: None,
         }
     }
 
@@ -237,18 +232,24 @@ impl Failure {
     }
 
     fn message(&self) -> String {
-        let expected_it = self.expected_it.as_ref()
+        let expected_it = self
+            .expected_it
+            .as_ref()
             .expect("incomplete failure: no expected_it provided");
-        let but_it = self.but_it.as_ref()
+        let but_it = self
+            .but_it
+            .as_ref()
             .expect("incomplete failure: no but_it provided");
 
-        format!("expected: <{}> {}\nbut:      it {}", &self.expression, expected_it, but_it)
+        format!(
+            "expected: <{}> {}\nbut:      it {}",
+            &self.expression, expected_it, but_it
+        )
     }
 }
 
 /// This trait provides access to the tested data of an [AssertThat] to write custom assertions.
 pub trait AssertThatData<T> {
-
     /// Gets a reference to the tested data. When writing a custom assertion, this is the data on
     /// which you check conditions.
     fn data(&self) -> &T;
@@ -263,7 +264,6 @@ pub trait AssertThatData<T> {
 }
 
 impl<T> AssertThatData<T> for AssertThat<T> {
-
     fn data(&self) -> &T {
         &self.data
     }
@@ -286,7 +286,7 @@ mod tests {
     fn assert_that_contains_correct_data() {
         assert_eq!(assert_that!(0).data, 0);
     }
-    
+
     #[test]
     fn assert_that_contains_correct_expression() {
         assert_eq!(&assert_that!(1 + (2 * 3)).expression, "1 + (2 * 3)");
@@ -297,7 +297,7 @@ mod tests {
     fn failure_panics_with_correct_message() {
         let assert_that = AssertThat {
             data: 0,
-            expression: "a".to_owned()
+            expression: "a".to_owned(),
         };
 
         Failure::new(&assert_that)

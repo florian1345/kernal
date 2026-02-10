@@ -1,11 +1,11 @@
-use std::fmt::{Debug, Formatter};
 use std::fmt;
+use std::fmt::{Debug, Formatter};
 
 use crate::util::multiset::{self, Multiset};
 
 pub(crate) struct VecMultisetIter<'iter, T> {
     set: &'iter VecMultiset<T>,
-    index: usize
+    index: usize,
 }
 
 impl<'iter, T> Iterator for VecMultisetIter<'iter, T> {
@@ -17,24 +17,25 @@ impl<'iter, T> Iterator for VecMultisetIter<'iter, T> {
                 self.index += 1;
                 Some((entry, *multiplicity))
             },
-            None => None
+            None => None,
         }
     }
 }
 
 pub(crate) struct VecMultiset<T> {
-    entries: Vec<(T, usize)>
+    entries: Vec<(T, usize)>,
 }
 
 impl<T: Debug + PartialEq> Multiset<T> for VecMultiset<T> {
-    type Iter<'iter> = VecMultisetIter<'iter, T>
+    type Iter<'iter>
+        = VecMultisetIter<'iter, T>
     where
         T: 'iter,
         Self: 'iter;
 
     fn new() -> VecMultiset<T> {
         VecMultiset {
-            entries: Vec::new()
+            entries: Vec::new(),
         }
     }
 
@@ -44,11 +45,11 @@ impl<T: Debug + PartialEq> Multiset<T> for VecMultiset<T> {
 
     fn iter<'reference>(&'reference self) -> Self::Iter<'reference>
     where
-        T: 'reference
+        T: 'reference,
     {
         VecMultisetIter {
             set: self,
-            index: 0
+            index: 0,
         }
     }
 

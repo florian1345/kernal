@@ -19,31 +19,33 @@ impl<T: Eq + Ord> MultisetMap<T> for BTreeMap<T, usize> {
 }
 
 pub(crate) struct BTreeMultisetIter<'iter, T> {
-    btree_map_iter: BTreeMapIter<'iter, T, usize>
+    btree_map_iter: BTreeMapIter<'iter, T, usize>,
 }
 
 impl<'iter, T> Iterator for BTreeMultisetIter<'iter, T> {
     type Item = (&'iter T, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.btree_map_iter.next().map(|(value, multiplicity)| (value, *multiplicity))
+        self.btree_map_iter
+            .next()
+            .map(|(value, multiplicity)| (value, *multiplicity))
     }
 }
 
 pub(crate) struct BTreeMultiset<T> {
-    entries: BTreeMap<T, usize>
+    entries: BTreeMap<T, usize>,
 }
 
 impl<T: Debug + Eq + Ord> Multiset<T> for BTreeMultiset<T> {
-
-    type Iter<'iter> = BTreeMultisetIter<'iter, T>
+    type Iter<'iter>
+        = BTreeMultisetIter<'iter, T>
     where
         T: 'iter,
         Self: 'iter;
 
     fn new() -> Self {
         BTreeMultiset {
-            entries: BTreeMap::new()
+            entries: BTreeMap::new(),
         }
     }
 
@@ -53,10 +55,10 @@ impl<T: Debug + Eq + Ord> Multiset<T> for BTreeMultiset<T> {
 
     fn iter<'reference>(&'reference self) -> BTreeMultisetIter<'reference, T>
     where
-        T: 'reference
+        T: 'reference,
     {
         BTreeMultisetIter {
-            btree_map_iter: self.entries.iter()
+            btree_map_iter: self.entries.iter(),
         }
     }
 

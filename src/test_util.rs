@@ -1,10 +1,14 @@
 use std::panic::UnwindSafe;
 
-use crate::{assert_that, Failure};
 use crate::panic::PanicAssertions;
+use crate::{Failure, assert_that};
 
 pub(crate) fn assert_fails_do<F: FnOnce() -> () + UnwindSafe>(
-        assertion: F, expression: &str, expected_it: impl Into<String>, but_it: impl Into<String>) {
+    assertion: F,
+    expression: &str,
+    expected_it: impl Into<String>,
+    but_it: impl Into<String>,
+) {
     let expected_message = Failure::from_expression(expression)
         .expected_it(expected_it)
         .but_it(but_it)

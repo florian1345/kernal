@@ -20,31 +20,33 @@ impl<T: Eq + Hash> MultisetMap<T> for HashMap<T, usize> {
 }
 
 pub(crate) struct HashMultisetIter<'iter, T> {
-    hash_map_iter: HashMapIter<'iter, T, usize>
+    hash_map_iter: HashMapIter<'iter, T, usize>,
 }
 
 impl<'iter, T> Iterator for HashMultisetIter<'iter, T> {
     type Item = (&'iter T, usize);
 
     fn next(&mut self) -> Option<(&'iter T, usize)> {
-        self.hash_map_iter.next().map(|(value, multiplicity)| (value, *multiplicity))
+        self.hash_map_iter
+            .next()
+            .map(|(value, multiplicity)| (value, *multiplicity))
     }
 }
 
 pub(crate) struct HashMultiset<T> {
-    entries: HashMap<T, usize>
+    entries: HashMap<T, usize>,
 }
 
 impl<T: Debug + Eq + Hash> Multiset<T> for HashMultiset<T> {
-
-    type Iter<'iter> = HashMultisetIter<'iter, T>
+    type Iter<'iter>
+        = HashMultisetIter<'iter, T>
     where
         T: 'iter,
         Self: 'iter;
 
     fn new() -> HashMultiset<T> {
         HashMultiset {
-            entries: HashMap::new()
+            entries: HashMap::new(),
         }
     }
 
@@ -54,10 +56,10 @@ impl<T: Debug + Eq + Hash> Multiset<T> for HashMultiset<T> {
 
     fn iter<'reference>(&'reference self) -> HashMultisetIter<'reference, T>
     where
-        T: 'reference
+        T: 'reference,
     {
         HashMultisetIter {
-            hash_map_iter: self.entries.iter()
+            hash_map_iter: self.entries.iter(),
         }
     }
 

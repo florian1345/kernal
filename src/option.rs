@@ -19,7 +19,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!(None::<u32>).is_none();
 /// ```
 pub trait OptionAssertions<T> {
-
     /// Asserts that the tested option is a `Some` variant with any value, i.e. that
     /// [Option::is_some] is `true`.
     fn is_some(self) -> Self;
@@ -36,18 +35,20 @@ pub trait OptionAssertions<T> {
 }
 
 fn fail_expected_it_to_be_some<T>(assert_that: &AssertThat<T>) -> ! {
-    Failure::new(assert_that).expected_it("to be <Some(_)>").but_it("was <None>").fail()
+    Failure::new(assert_that)
+        .expected_it("to be <Some(_)>")
+        .but_it("was <None>")
+        .fail()
 }
 
 fn to_value_assert_that<T>(data: T, expression: &str) -> AssertThat<T> {
     AssertThat {
         data,
-        expression: format!("value of <{}>", expression)
+        expression: format!("value of <{}>", expression),
     }
 }
 
 impl<T: Debug, O: Borrow<Option<T>>> OptionAssertions<T> for AssertThat<O> {
-
     fn is_some(self) -> Self {
         if self.data.borrow().is_none() {
             fail_expected_it_to_be_some(&self);
@@ -70,7 +71,7 @@ impl<T: Debug, O: Borrow<Option<T>>> OptionAssertions<T> for AssertThat<O> {
     fn to_value_ref(&self) -> AssertThat<&T> {
         match self.data.borrow() {
             None => fail_expected_it_to_be_some(self),
-            Some(data) => to_value_assert_that(data, &self.expression)
+            Some(data) => to_value_assert_that(data, &self.expression),
         }
     }
 }
@@ -86,7 +87,6 @@ impl<T: Debug, O: Borrow<Option<T>>> OptionAssertions<T> for AssertThat<O> {
 /// assert_that!(Some(1)).to_value().is_less_than(2);
 /// ```
 pub trait OwnedOptionAssertions<T> {
-
     /// Asserts that the tested option is a `Some` variant and converts this asserter to one for the
     /// contained value, so chained assertions can be run on the unwrapped value.
     fn to_value(self) -> AssertThat<T>;
@@ -96,7 +96,7 @@ impl<T> OwnedOptionAssertions<T> for AssertThat<Option<T>> {
     fn to_value(self) -> AssertThat<T> {
         match self.data {
             None => fail_expected_it_to_be_some(&self),
-            Some(data) => to_value_assert_that(data, &self.expression)
+            Some(data) => to_value_assert_that(data, &self.expression),
         }
     }
 }
@@ -114,7 +114,6 @@ impl<T> OwnedOptionAssertions<T> for AssertThat<Option<T>> {
 /// assert_that!(None::<u32>).does_not_contain(0);
 /// ```
 pub trait OptionPartialEqAssertions<T> {
-
     /// Asserts that the tested option is a `Some` variant that contains a value equal to the given
     /// `expected` value according to the [PartialEq] trait.
     fn contains<E: Borrow<T>>(self, expected: E) -> Self;
@@ -125,7 +124,6 @@ pub trait OptionPartialEqAssertions<T> {
 }
 
 impl<T: Debug + PartialEq, O: Borrow<Option<T>>> OptionPartialEqAssertions<T> for AssertThat<O> {
-
     fn contains<E: Borrow<T>>(self, expected: E) -> Self {
         let expected = expected.borrow();
 
@@ -156,10 +154,9 @@ impl<T: Debug + PartialEq, O: Borrow<Option<T>>> OptionPartialEqAssertions<T> fo
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-    use crate::partial_eq::PartialEqAssertions;
-
     use super::*;
+    use crate::partial_eq::PartialEqAssertions;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_some_passes_for_some() {

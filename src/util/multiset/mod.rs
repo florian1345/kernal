@@ -8,8 +8,7 @@ pub(crate) mod vec;
 /// Equality of elements is defined via the [PartialEq] trait. Multiplicities are the cardinalities
 /// of the [PartialEq]-equivalence classes. Implementations of this trait may use other traits (such
 /// as [Hash](hash::Hash) or [Ord]) to make lookups faster.
-pub(crate) trait Multiset<T> : Debug + FromIterator<T> {
-
+pub(crate) trait Multiset<T>: Debug + FromIterator<T> {
     /// The type of iterator used by this multiset. It iterates over pairs whose left element is a
     /// representative of the [PartialEq]-equivalence-class of a set item and the right element its
     /// multiplicity.
@@ -58,7 +57,7 @@ fn multiset_from_iter<T, M: Multiset<T>, I: IntoIterator<Item = T>>(iter: I) -> 
 fn fmt_multiset_debug<T, M>(multiset: &M, f: &mut Formatter<'_>) -> fmt::Result
 where
     T: Debug + PartialEq,
-    M: Multiset<T>
+    M: Multiset<T>,
 {
     for (index, (item, amount)) in multiset.iter().enumerate() {
         if index > 0 {
@@ -72,7 +71,6 @@ where
 }
 
 trait MultisetMap<T> {
-
     fn get_mut(&mut self, item: &T) -> Option<&mut usize>;
 
     fn insert(&mut self, item: T);
@@ -210,6 +208,6 @@ mod tests {
                 assert!(!remove_result);
                 assert_eq!(HashSet::from([(&2, 1), (&3, 1), (&4, 1)]), entries);
             }
-        }
+        };
     }
 }

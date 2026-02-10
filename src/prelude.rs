@@ -3,31 +3,30 @@
 //! [fast_prelude](crate::fast_prelude)). This means that by glob-importing this module all
 //! functionally distinguishable assertion methods become available.
 
-pub use crate::{assert_that, dyn_assertions};
 pub use crate::abs_diff::AbsDiffPartialOrdAssertions;
 pub use crate::boolean::BooleanAssertions;
 pub use crate::character::CharacterAssertions;
 pub use crate::collections::CollectionAssertions;
 pub use crate::collections::abs_diff::{
     CollectionAbsDiffAssertions,
-    OrderedCollectionAbsDiffAssertions
+    OrderedCollectionAbsDiffAssertions,
 };
 pub use crate::collections::ord::CollectionOrdAssertions;
 pub use crate::collections::ordered::OrderedCollectionAssertions;
 pub use crate::collections::partial_eq::{
     CollectionPartialEqAssertions,
-    OrderedCollectionPartialEqAssertions
+    OrderedCollectionPartialEqAssertions,
 };
 pub use crate::collections::partial_ord::{
     CollectionPartialOrdAssertions,
-    OrderedCollectionPartialOrdAssertions
+    OrderedCollectionPartialOrdAssertions,
 };
 pub use crate::error::ErrorAssertions;
 pub use crate::lock::{LockAssertions, MutexAssertions, RwLockAssertions};
 pub use crate::maps::MapAssertions;
 pub use crate::maps::partial_eq::MapPartialEqAssertions;
 pub use crate::num::float::FloatAssertions;
-pub use crate::num::rem::{RemAssertions, MaybeIntegerAssertions, EvennessAssertions};
+pub use crate::num::rem::{EvennessAssertions, MaybeIntegerAssertions, RemAssertions};
 pub use crate::num::signed::{SignedAssertions, ZeroableAssertions};
 pub use crate::option::{OptionAssertions, OptionPartialEqAssertions, OwnedOptionAssertions};
 pub use crate::panic::PanicAssertions;
@@ -39,7 +38,8 @@ pub use crate::result::{
     OwnedResultAssertions,
     ResultAssertions,
     ResultErrorPartialEqAssertions,
-    ResultValuePartialEqAssertions
+    ResultValuePartialEqAssertions,
 };
 pub use crate::string::StringAssertions;
 pub use crate::string::pattern::StringPatternAssertions;
+pub use crate::{assert_that, dyn_assertions};

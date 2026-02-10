@@ -3,26 +3,26 @@
 //! provided by [MapAssertions]. Sub-modules of this module provide more specialized assertions.
 
 use std::borrow::Borrow;
-use std::collections::{BTreeMap, HashMap};
 use std::collections::btree_map::{
     Iter as BTreeMapEntryIter,
     Keys as BTreeMapKeyIter,
-    Values as BTreeMapValueIter
+    Values as BTreeMapValueIter,
 };
 use std::collections::hash_map::{
     Iter as HashMapEntryIter,
     Keys as HashMapKeyIter,
-    Values as HashMapValueIter
+    Values as HashMapValueIter,
 };
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
-use crate::{AssertThat, Failure};
 use crate::collections::{Collection, CollectionDebug};
 use crate::maps::debug::{HighlightedMapDebug, MapDebug};
 use crate::util::borrow_all;
+use crate::{AssertThat, Failure};
 
 pub mod partial_eq;
 
@@ -38,7 +38,6 @@ mod debug;
 /// This trait is required to allow map-based assertions. It is implemented on all common map types
 /// in the standard library and references thereof.
 pub trait Map<'map> {
-
     /// The type of keys used for lookup in this map type to obtain values.
     type Key;
 
@@ -110,43 +109,46 @@ pub trait Map<'map> {
 impl<'map, K, V> Map<'map> for HashMap<K, V>
 where
     K: Eq + Hash + 'map,
-    V: 'map
+    V: 'map,
 {
     type Key = K;
     type Value = V;
 
-    type KeyIter<'iter> = HashMapKeyIter<'iter, K, V>
+    type KeyIter<'iter>
+        = HashMapKeyIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
-    type ValueIter<'iter> = HashMapValueIter<'iter, K, V>
+    type ValueIter<'iter>
+        = HashMapValueIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
-    type EntryIter<'iter> = HashMapEntryIter<'iter, K, V>
+    type EntryIter<'iter>
+        = HashMapEntryIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
     fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         HashMap::keys(self)
     }
 
     fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         HashMap::values(self)
     }
 
     fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         HashMap::iter(self)
     }
@@ -167,43 +169,46 @@ where
 impl<'map, K, V> Map<'map> for BTreeMap<K, V>
 where
     K: Ord + 'map,
-    V: 'map
+    V: 'map,
 {
     type Key = K;
     type Value = V;
 
-    type KeyIter<'iter> = BTreeMapKeyIter<'iter, K, V>
+    type KeyIter<'iter>
+        = BTreeMapKeyIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
-    type ValueIter<'iter> = BTreeMapValueIter<'iter, K, V>
+    type ValueIter<'iter>
+        = BTreeMapValueIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
-    type EntryIter<'iter> = BTreeMapEntryIter<'iter, K, V>
+    type EntryIter<'iter>
+        = BTreeMapEntryIter<'iter, K, V>
     where
         Self: 'iter,
         'map: 'iter;
 
     fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         BTreeMap::keys(self)
     }
 
     fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         BTreeMap::values(self)
     }
 
     fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         BTreeMap::iter(self)
     }
@@ -224,42 +229,44 @@ where
 macro_rules! impl_map_for_ref {
     ($ref_type:ty) => {
         impl<'map, M: Map<'map>> Map<'map> for $ref_type {
-
             type Key = M::Key;
             type Value = M::Value;
 
-            type KeyIter<'iter> = M::KeyIter<'iter>
+            type KeyIter<'iter>
+                = M::KeyIter<'iter>
             where
                 Self: 'iter,
                 'map: 'iter;
 
-            type ValueIter<'iter> = M::ValueIter<'iter>
+            type ValueIter<'iter>
+                = M::ValueIter<'iter>
             where
                 Self: 'iter,
                 'map: 'iter;
 
-            type EntryIter<'iter> = M::EntryIter<'iter>
+            type EntryIter<'iter>
+                = M::EntryIter<'iter>
             where
                 Self: 'iter,
                 'map: 'iter;
 
             fn keys<'reference>(&'reference self) -> M::KeyIter<'reference>
             where
-                'map: 'reference
+                'map: 'reference,
             {
                 (**self).keys()
             }
 
             fn values<'reference>(&'reference self) -> M::ValueIter<'reference>
             where
-                'map: 'reference
+                'map: 'reference,
             {
                 (**self).values()
             }
 
             fn entries<'reference>(&'reference self) -> M::EntryIter<'reference>
             where
-                'map: 'reference
+                'map: 'reference,
             {
                 (**self).entries()
             }
@@ -280,7 +287,7 @@ macro_rules! impl_map_for_ref {
                 M::are_keys_equal(key_1, key_2)
             }
         }
-    }
+    };
 }
 
 impl_map_for_ref!(&M);
@@ -291,20 +298,21 @@ impl_map_for_ref!(Box<M>);
 /// the same items as [Map::keys].
 pub struct MapKeys<'map, M: Map<'map>> {
     _lifetime: PhantomData<&'map ()>,
-    map: M
+    map: M,
 }
 
 impl<'map, M: Map<'map>> Collection<'map> for MapKeys<'map, M> {
     type Item = M::Key;
 
-    type Iter<'iter> = M::KeyIter<'iter>
+    type Iter<'iter>
+        = M::KeyIter<'iter>
     where
         Self: 'iter,
         'map: 'iter;
 
     fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         self.map.keys()
     }
@@ -314,20 +322,21 @@ impl<'map, M: Map<'map>> Collection<'map> for MapKeys<'map, M> {
 /// the same items as [Map::values].
 pub struct MapValues<'map, M: Map<'map>> {
     _lifetime: PhantomData<&'map ()>,
-    map: M
+    map: M,
 }
 
 impl<'map, M: Map<'map>> Collection<'map> for MapValues<'map, M> {
     type Item = M::Value;
 
-    type Iter<'iter> = M::ValueIter<'iter>
+    type Iter<'iter>
+        = M::ValueIter<'iter>
     where
         Self: 'iter,
         'map: 'iter;
 
     fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
     where
-        'map: 'reference
+        'map: 'reference,
     {
         self.map.values()
     }
@@ -336,20 +345,21 @@ impl<'map, M: Map<'map>> Collection<'map> for MapValues<'map, M> {
 /// A [Collection] which contains the entries of a [Map]. The [Collection::iterator] returns
 /// _references_ to the [Map::entries], whose items are instantiated with the `'wrapper` lifetime.
 pub struct MapEntries<'wrapper, 'map, M: Map<'map>> {
-    entries: Vec<(&'wrapper M::Key, &'wrapper M::Value)>
+    entries: Vec<(&'wrapper M::Key, &'wrapper M::Value)>,
 }
 
 impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper, 'map, M> {
     type Item = (&'wrapper M::Key, &'wrapper M::Value);
 
-    type Iter<'iter> = SliceIter<'iter, Self::Item>
+    type Iter<'iter>
+        = SliceIter<'iter, Self::Item>
     where
         Self: 'iter,
         'wrapper: 'iter;
 
     fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
     where
-        'wrapper: 'reference
+        'wrapper: 'reference,
     {
         self.entries.iter()
     }
@@ -373,7 +383,6 @@ impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper,
 /// assert_that!(fruit_map).to_keys().contains_exactly_in_any_order(["banana", "apple"]);
 /// ```
 pub trait MapAssertions<'map, M: Map<'map>> {
-
     /// Asserts that the tested map is empty, i.e. contains no entries.
     fn is_empty(self) -> Self;
 
@@ -445,19 +454,23 @@ pub trait MapAssertions<'map, M: Map<'map>> {
         'map: 'this;
 }
 
-fn assert_length_predicate<'map, M, F>(assert_that: AssertThat<M>, length_predicate: F,
-    reference_len: usize, expected_it_prefix: &str) -> AssertThat<M>
+fn assert_length_predicate<'map, M, F>(
+    assert_that: AssertThat<M>,
+    length_predicate: F,
+    reference_len: usize,
+    expected_it_prefix: &str,
+) -> AssertThat<M>
 where
     M: Map<'map>,
     M::Key: Debug,
     M::Value: Debug,
-    F: Fn(usize) -> bool
+    F: Fn(usize) -> bool,
 {
     let len = assert_that.data.len();
 
     if !length_predicate(len) {
         let map_debug = MapDebug {
-            map: &assert_that.data
+            map: &assert_that.data,
         };
 
         Failure::new(&assert_that)
@@ -473,7 +486,7 @@ impl<'map, M> MapAssertions<'map, M> for AssertThat<M>
 where
     M: Map<'map> + 'map,
     M::Key: Debug,
-    M::Value: Debug
+    M::Value: Debug,
 {
     fn is_empty(self) -> Self {
         if !self.data.is_empty() {
@@ -488,7 +501,10 @@ where
 
     fn is_not_empty(self) -> Self {
         if self.data.is_empty() {
-            Failure::new(&self).expected_it("not to be empty").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be empty")
+                .but_it("was")
+                .fail();
         }
 
         self
@@ -496,38 +512,65 @@ where
 
     fn has_length(self, expected_length: usize) -> Self {
         assert_length_predicate(
-            self, |len| len == expected_length, expected_length, "to have length")
+            self,
+            |len| len == expected_length,
+            expected_length,
+            "to have length",
+        )
     }
 
     fn has_length_less_than(self, length_bound: usize) -> Self {
         assert_length_predicate(
-            self, |len| len < length_bound, length_bound, "to have length less than")
+            self,
+            |len| len < length_bound,
+            length_bound,
+            "to have length less than",
+        )
     }
 
     fn has_length_less_than_or_equal_to(self, length_bound: usize) -> Self {
         assert_length_predicate(
-            self, |len| len <= length_bound, length_bound, "to have length less than or equal to")
+            self,
+            |len| len <= length_bound,
+            length_bound,
+            "to have length less than or equal to",
+        )
     }
 
     fn has_length_greater_than(self, length_bound: usize) -> Self {
         assert_length_predicate(
-            self, |len| len > length_bound, length_bound, "to have length greater than")
+            self,
+            |len| len > length_bound,
+            length_bound,
+            "to have length greater than",
+        )
     }
 
     fn has_length_greater_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_length_predicate(self,
-            |len| len >= length_bound, length_bound, "to have length greater than or equal to")
+        assert_length_predicate(
+            self,
+            |len| len >= length_bound,
+            length_bound,
+            "to have length greater than or equal to",
+        )
     }
 
     fn does_not_have_length(self, unexpected_length: usize) -> Self {
-        assert_length_predicate(self,
-            |len| len != unexpected_length, unexpected_length, "not to have length")
+        assert_length_predicate(
+            self,
+            |len| len != unexpected_length,
+            unexpected_length,
+            "not to have length",
+        )
     }
 
     fn contains_key<K: Borrow<M::Key>>(self, key: K) -> Self {
         if self.data.get(&key).is_none() {
             Failure::new(&self)
-                .expected_it(format!("to contain an entry for the key <{:?}>", key.borrow()))
+                .expected_it(format!(
+                    "to contain an entry for the key <{:?}>",
+                    key.borrow()
+                ))
                 .but_it(format!("was <{:?}>", MapDebug { map: &self.data }))
                 .fail();
         }
@@ -539,11 +582,14 @@ where
         if self.data.get(&key).is_some() {
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: key.borrow()
+                highlighted_key: key.borrow(),
             };
 
             Failure::new(&self)
-                .expected_it(format!("not to contain an entry for the key <{:?}>", key.borrow()))
+                .expected_it(format!(
+                    "not to contain an entry for the key <{:?}>",
+                    key.borrow()
+                ))
                 .but_it(format!("was <{:?}>", highlighted_map_debug))
                 .fail();
         }
@@ -560,9 +606,14 @@ where
             let map_debug = MapDebug { map: &self.data };
 
             Failure::new(&self)
-                .expected_it(format!("to contain entries for the keys <{:?}>", keys_debug))
+                .expected_it(format!(
+                    "to contain entries for the keys <{:?}>",
+                    keys_debug
+                ))
                 .but_it(format!(
-                    "was <{:?}>, which is missing the key <{:?}>", map_debug, missing_key))
+                    "was <{:?}>, which is missing the key <{:?}>",
+                    map_debug, missing_key
+                ))
                 .fail();
         }
 
@@ -577,11 +628,14 @@ where
             let keys_debug = CollectionDebug { collection: &keys };
             let map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: present_key
+                highlighted_key: present_key,
             };
 
             Failure::new(&self)
-                .expected_it(format!("not to contain entries for the keys <{:?}>", keys_debug))
+                .expected_it(format!(
+                    "not to contain entries for the keys <{:?}>",
+                    keys_debug
+                ))
                 .but_it(format!("was <{:?}>", map_debug))
                 .fail();
         }
@@ -592,32 +646,48 @@ where
     fn contains_exactly_keys<K: Borrow<M::Key>, I: IntoIterator<Item = K>>(self, keys: I) -> Self {
         let expected_keys_unborrowed = keys.into_iter().collect::<Vec<_>>();
         let expected_keys: Vec<&M::Key> = borrow_all(&expected_keys_unborrowed);
-        let missing_keys = expected_keys.iter().cloned()
+        let missing_keys = expected_keys
+            .iter()
+            .cloned()
             .filter(|&expected_key| self.data.get(expected_key).is_none())
             .collect::<Vec<_>>();
-        let superfluous_keys: Vec<&M::Key> = self.data.keys()
-            .filter(|actual_key| !expected_keys.iter()
-                .any(|expected_key| M::are_keys_equal(actual_key, expected_key)))
+        let superfluous_keys: Vec<&M::Key> = self
+            .data
+            .keys()
+            .filter(|actual_key| {
+                !expected_keys
+                    .iter()
+                    .any(|expected_key| M::are_keys_equal(actual_key, expected_key))
+            })
             .collect::<Vec<_>>();
         let mut errors = Vec::new();
 
         if !missing_keys.is_empty() {
-            let missing_keys_debug = CollectionDebug { collection: &missing_keys };
+            let missing_keys_debug = CollectionDebug {
+                collection: &missing_keys,
+            };
             errors.push(format!("lacks <{:?}>", missing_keys_debug));
         }
 
         if !superfluous_keys.is_empty() {
-            let superfluous_keys_debug = CollectionDebug { collection: &superfluous_keys };
+            let superfluous_keys_debug = CollectionDebug {
+                collection: &superfluous_keys,
+            };
             errors.push(format!("additionally has <{:?}>", superfluous_keys_debug));
         }
 
         if !errors.is_empty() {
-            let expected_keys_debug = CollectionDebug { collection: &expected_keys };
+            let expected_keys_debug = CollectionDebug {
+                collection: &expected_keys,
+            };
             let map_debug = MapDebug { map: &self.data };
             let error_message = errors.join(" and ");
 
             Failure::new(&self)
-                .expected_it(format!("to contain exactly the keys <{:?}>", expected_keys_debug))
+                .expected_it(format!(
+                    "to contain exactly the keys <{:?}>",
+                    expected_keys_debug
+                ))
                 .but_it(format!("was <{:?}>, which {}", map_debug, error_message))
                 .fail()
         }
@@ -631,7 +701,7 @@ where
                 _lifetime: PhantomData,
                 map: self.data,
             },
-            expression: format!("keys of <{}>", self.expression)
+            expression: format!("keys of <{}>", self.expression),
         }
     }
 
@@ -641,7 +711,7 @@ where
                 _lifetime: PhantomData,
                 map: self.data,
             },
-            expression: format!("values of <{}>", self.expression)
+            expression: format!("values of <{}>", self.expression),
         }
     }
 
@@ -649,64 +719,66 @@ where
 
     fn to_entries<'this>(&'this self) -> AssertThat<MapEntries<'this, 'map, M>>
     where
-        'map: 'this
+        'map: 'this,
     {
         AssertThat {
             data: MapEntries {
                 entries: self.data.entries().collect::<Vec<_>>(),
             },
-            expression: format!("entries of <{}>", self.expression)
+            expression: format!("entries of <{}>", self.expression),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_fails, assert_that};
-    use crate::prelude::*;
-
-    use super::*;
-
     use std::iter::Empty;
     use std::slice::Iter as SliceIter;
 
+    use super::*;
+    use crate::prelude::*;
+    use crate::{assert_fails, assert_that};
+
     struct MockMap {
-        keys: Vec<i32>
+        keys: Vec<i32>,
     }
 
     impl<'map> Map<'map> for MockMap {
         type Key = i32;
         type Value = i32;
-        type KeyIter<'iter> = SliceIter<'iter, i32>
+        type KeyIter<'iter>
+            = SliceIter<'iter, i32>
         where
             Self: 'iter,
             'map: 'iter;
-        type ValueIter<'iter> = Empty<&'iter i32>
+        type ValueIter<'iter>
+            = Empty<&'iter i32>
         where
             Self: 'iter,
             'map: 'iter;
-        type EntryIter<'iter> = Empty<(&'iter i32, &'iter i32)>
+        type EntryIter<'iter>
+            = Empty<(&'iter i32, &'iter i32)>
         where
             Self: 'iter,
             'map: 'iter;
 
         fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
         where
-            'map: 'reference
+            'map: 'reference,
         {
             self.keys.iter()
         }
 
         fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
         where
-            'map: 'reference
+            'map: 'reference,
         {
             panic!("mock map values not expected to be called")
         }
 
         fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
         where
-            'map: 'reference
+            'map: 'reference,
         {
             panic!("mock map entries not expected to be called")
         }
@@ -732,12 +804,18 @@ mod tests {
 
     #[test]
     fn default_len_works_for_larger_map() {
-        assert_that!(MockMap { keys: vec![2, 4, 6] }).has_length(3);
+        assert_that!(MockMap {
+            keys: vec![2, 4, 6]
+        })
+        .has_length(3);
     }
 
     #[test]
     fn default_is_empty_for_larger_map() {
-        assert_that!(MockMap { keys: vec![2, 4, 6] }).is_not_empty();
+        assert_that!(MockMap {
+            keys: vec![2, 4, 6]
+        })
+        .is_not_empty();
     }
 
     #[test]
@@ -897,8 +975,12 @@ mod tests {
 
     #[test]
     fn contains_key_passes_for_valid_key_in_larger_map() {
-        assert_that!(&BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
-            .contains_key("banana");
+        assert_that!(&BTreeMap::from([
+            ("apple", 1),
+            ("banana", 2),
+            ("cherry", 3)
+        ]))
+        .contains_key("banana");
     }
 
     #[test]
@@ -1088,18 +1170,22 @@ mod tests {
 
     #[test]
     fn to_keys_works_for_empty_map() {
-        assert_that!(HashMap::<&str, i32>::new()).to_keys().is_empty();
+        assert_that!(HashMap::<&str, i32>::new())
+            .to_keys()
+            .is_empty();
     }
 
     #[test]
     fn to_keys_works_on_singleton_map() {
-        assert_that!(&HashMap::from([("apple", 1)])).to_keys()
+        assert_that!(&HashMap::from([("apple", 1)]))
+            .to_keys()
             .contains_exactly_in_any_order(["apple"]);
     }
 
     #[test]
     fn to_keys_works_on_larger_map() {
-        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)])).to_keys()
+        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .to_keys()
             .contains_exactly_in_any_order(["apple", "banana", "cherry"]);
     }
 
@@ -1113,18 +1199,22 @@ mod tests {
 
     #[test]
     fn to_values_works_for_empty_map() {
-        assert_that!(HashMap::<&str, i32>::new()).to_values().is_empty();
+        assert_that!(HashMap::<&str, i32>::new())
+            .to_values()
+            .is_empty();
     }
 
     #[test]
     fn to_values_works_on_singleton_map() {
-        assert_that!(&HashMap::from([("apple", 1)])).to_values()
+        assert_that!(&HashMap::from([("apple", 1)]))
+            .to_values()
             .contains_exactly_in_any_order([1]);
     }
 
     #[test]
     fn to_values_works_on_larger_map() {
-        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)])).to_values()
+        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .to_values()
             .contains_exactly_in_any_order([1, 2, 3]);
     }
 
@@ -1138,18 +1228,22 @@ mod tests {
 
     #[test]
     fn to_entries_works_for_empty_map() {
-        assert_that!(HashMap::<&str, i32>::new()).to_entries().is_empty();
+        assert_that!(HashMap::<&str, i32>::new())
+            .to_entries()
+            .is_empty();
     }
 
     #[test]
     fn to_entries_works_on_singleton_map() {
-        assert_that!(&HashMap::from([("apple", 1)])).to_entries()
+        assert_that!(&HashMap::from([("apple", 1)]))
+            .to_entries()
             .contains_exactly_in_any_order([(&"apple", &1)]);
     }
 
     #[test]
     fn to_entries_works_on_larger_map() {
-        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)])).to_entries()
+        assert_that!(BTreeMap::from([("apple", 1), ("banana", 2), ("cherry", 3)]))
+            .to_entries()
             .contains_exactly_in_any_order([(&"apple", &1), (&"banana", &2), (&"cherry", &3)]);
     }
 

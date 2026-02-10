@@ -14,7 +14,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!(1 == 2).is_false();
 /// ```
 pub trait BooleanAssertions {
-
     /// Asserts that the tested boolean is `true`.
     fn is_true(self) -> Self;
 
@@ -23,10 +22,12 @@ pub trait BooleanAssertions {
 }
 
 impl BooleanAssertions for AssertThat<bool> {
-
     fn is_true(self) -> AssertThat<bool> {
         if !self.data {
-            Failure::new(&self).expected_it("to be true").but_it("was false").fail();
+            Failure::new(&self)
+                .expected_it("to be true")
+                .but_it("was false")
+                .fail();
         }
 
         self
@@ -34,7 +35,10 @@ impl BooleanAssertions for AssertThat<bool> {
 
     fn is_false(self) -> AssertThat<bool> {
         if self.data {
-            Failure::new(&self).expected_it("to be false").but_it("was true").fail();
+            Failure::new(&self)
+                .expected_it("to be false")
+                .but_it("was true")
+                .fail();
         }
 
         self
@@ -44,9 +48,8 @@ impl BooleanAssertions for AssertThat<bool> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_true_passes_for_true() {

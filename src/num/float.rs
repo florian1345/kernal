@@ -10,7 +10,6 @@ use crate::{AssertThat, Failure};
 /// be infinite or NaN (not a number). This is implemented on all primitive float types of the
 /// standard library. Used to enable assertions defined by [FloatAssertions].
 pub trait Float {
-
     /// Indicates whether this float is infinite, i.e. positive infinity or negative infinity.
     fn is_infinite(&self) -> bool;
 
@@ -21,7 +20,6 @@ pub trait Float {
 macro_rules! impl_float {
     ($type:ty) => {
         impl Float for $type {
-
             fn is_infinite(&self) -> bool {
                 <$type>::is_infinite(*self)
             }
@@ -30,7 +28,7 @@ macro_rules! impl_float {
                 <$type>::is_nan(*self)
             }
         }
-    }
+    };
 }
 
 impl_float!(f32);
@@ -50,7 +48,6 @@ impl_float!(f64);
 /// assert_that!(f32::NAN).is_nan();
 /// ```
 pub trait FloatAssertions {
-
     /// Asserts that the tested float represents a finite number, i.e. it is not positive infinity,
     /// negative infinity, or NaN.
     fn is_finite(self) -> Self;
@@ -66,10 +63,12 @@ pub trait FloatAssertions {
 }
 
 impl<T: Debug + Float> FloatAssertions for AssertThat<T> {
-
     fn is_finite(self) -> Self {
         if self.data.is_infinite() || self.data.is_nan() {
-            Failure::new(&self).expected_it("to be finite").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be finite")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -77,7 +76,10 @@ impl<T: Debug + Float> FloatAssertions for AssertThat<T> {
 
     fn is_infinite(self) -> Self {
         if !self.data.is_infinite() {
-            Failure::new(&self).expected_it("to be infinite").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be infinite")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -85,7 +87,10 @@ impl<T: Debug + Float> FloatAssertions for AssertThat<T> {
 
     fn is_nan(self) -> Self {
         if !self.data.is_nan() {
-            Failure::new(&self).expected_it("to be <NaN>").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be <NaN>")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -93,7 +98,10 @@ impl<T: Debug + Float> FloatAssertions for AssertThat<T> {
 
     fn is_not_nan(self) -> Self {
         if self.data.is_nan() {
-            Failure::new(&self).expected_it("not to be <NaN>").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be <NaN>")
+                .but_it("was")
+                .fail();
         }
 
         self
@@ -104,7 +112,6 @@ impl<T: Debug + Float> FloatAssertions for AssertThat<T> {
 mod tests {
 
     use super::*;
-
     use crate::{assert_fails, assert_that};
 
     #[test]

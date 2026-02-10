@@ -5,9 +5,9 @@
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-use crate::{AssertThat, Failure};
-use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug};
 use crate::collections::ordered::OrderedCollection;
+use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug};
+use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Collection] trait and whose [Collection::Item] type implements
@@ -23,7 +23,6 @@ use crate::collections::ordered::OrderedCollection;
 ///     .contains_only_items_greater_than_or_equal_to(1);
 /// ```
 pub trait CollectionPartialOrdAssertions<'collection, C: Collection<'collection>> {
-
     /// Asserts that the tested collection contains at least one element that is less than the given
     /// `bound` according to [PartialOrd]. In particular, this always fails for empty collections.
     fn contains_items_less_than<E: Borrow<C::Item>>(self, bound: E) -> Self;
@@ -62,45 +61,73 @@ pub trait CollectionPartialOrdAssertions<'collection, C: Collection<'collection>
     fn contains_only_items_greater_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self;
 }
 
-fn assert_contains_items_matching_bound<'collection, C, E, F>(assert_that: AssertThat<C>, bound: E,
-    mut operation: F, operation_name: &str) -> AssertThat<C>
+fn assert_contains_items_matching_bound<'collection, C, E, F>(
+    assert_that: AssertThat<C>,
+    bound: E,
+    mut operation: F,
+    operation_name: &str,
+) -> AssertThat<C>
 where
     C: Collection<'collection>,
     C::Item: Debug + PartialOrd,
     E: Borrow<C::Item>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     let bound = bound.borrow();
 
-    if !assert_that.data.iterator().any(|item| operation(item, bound)) {
+    if !assert_that
+        .data
+        .iterator()
+        .any(|item| operation(item, bound))
+    {
         Failure::new(&assert_that)
-            .expected_it(format!("to contain elements {} <{:?}>", operation_name, bound))
-            .but_it(format!("was <{:?}>", CollectionDebug { collection: &assert_that.data }))
+            .expected_it(format!(
+                "to contain elements {} <{:?}>",
+                operation_name, bound
+            ))
+            .but_it(format!(
+                "was <{:?}>",
+                CollectionDebug {
+                    collection: &assert_that.data
+                }
+            ))
             .fail();
     }
 
     assert_that
 }
 
-fn assert_contains_only_items_matching_bound<'collection, C, E, F>(assert_that: AssertThat<C>,
-    bound: E, mut operation: F, operation_name: &str) -> AssertThat<C>
+fn assert_contains_only_items_matching_bound<'collection, C, E, F>(
+    assert_that: AssertThat<C>,
+    bound: E,
+    mut operation: F,
+    operation_name: &str,
+) -> AssertThat<C>
 where
     C: Collection<'collection>,
     C::Item: Debug + PartialOrd,
     E: Borrow<C::Item>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     let bound = bound.borrow();
-    let counter_example_index = assert_that.data.iterator().enumerate()
+    let counter_example_index = assert_that
+        .data
+        .iterator()
+        .enumerate()
         .find(|(_, item)| !operation(item, bound))
         .map(|(index, _)| index);
 
     if let Some(counter_example_index) = counter_example_index {
         let collection_debug = HighlightedCollectionDebug::with_single_highlighted_element(
-            &assert_that.data, counter_example_index);
+            &assert_that.data,
+            counter_example_index,
+        );
 
         Failure::new(&assert_that)
-            .expected_it(format!("to contain only elements {} <{:?}>", operation_name, bound))
+            .expected_it(format!(
+                "to contain only elements {} <{:?}>",
+                operation_name, bound
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -111,7 +138,7 @@ where
 impl<'collection, C> CollectionPartialOrdAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug + PartialOrd
+    C::Item: Debug + PartialOrd,
 {
     fn contains_items_less_than<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_items_matching_bound(self, bound, |item, bound| item < bound, "less than")
@@ -119,37 +146,65 @@ where
 
     fn contains_only_items_less_than<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_only_items_matching_bound(
-            self, bound, |item, bound| item < bound, "less than")
+            self,
+            bound,
+            |item, bound| item < bound,
+            "less than",
+        )
     }
 
     fn contains_items_less_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_items_matching_bound(
-            self, bound, |item, bound| item <= bound, "less than or equal to")
+            self,
+            bound,
+            |item, bound| item <= bound,
+            "less than or equal to",
+        )
     }
 
     fn contains_only_items_less_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_only_items_matching_bound(
-            self, bound, |item, bound| item <= bound, "less than or equal to")
+            self,
+            bound,
+            |item, bound| item <= bound,
+            "less than or equal to",
+        )
     }
 
     fn contains_items_greater_than<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_items_matching_bound(
-            self, bound, |item, bound| item > bound, "greater than")
+            self,
+            bound,
+            |item, bound| item > bound,
+            "greater than",
+        )
     }
 
     fn contains_only_items_greater_than<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_only_items_matching_bound(
-            self, bound, |item, bound| item > bound, "greater than")
+            self,
+            bound,
+            |item, bound| item > bound,
+            "greater than",
+        )
     }
 
     fn contains_items_greater_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_items_matching_bound(
-            self, bound, |item, bound| item >= bound, "greater than or equal to")
+            self,
+            bound,
+            |item, bound| item >= bound,
+            "greater than or equal to",
+        )
     }
 
     fn contains_only_items_greater_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self {
         assert_contains_only_items_matching_bound(
-            self, bound, |item, bound| item >= bound, "greater than or equal to")
+            self,
+            bound,
+            |item, bound| item >= bound,
+            "greater than or equal to",
+        )
     }
 }
 
@@ -166,7 +221,6 @@ where
 /// assert_that!(&[9, 6, 5, 2]).is_sorted_in_strictly_descending_order();
 /// ```
 pub trait OrderedCollectionPartialOrdAssertions {
-
     /// Asserts that the tested collection is sorted in non-strictly ascending order, i.e. each
     /// element's successor is greater than or equal to the element. This always passes for empty or
     /// singleton collections.
@@ -188,25 +242,31 @@ pub trait OrderedCollectionPartialOrdAssertions {
     fn is_sorted_in_strictly_descending_order(self) -> Self;
 }
 
-fn find_sorting_counter_example_index<'collection, C, F>(collection: &C, are_correctly_ordered: F)
-    -> Option<usize>
+fn find_sorting_counter_example_index<'collection, C, F>(
+    collection: &C,
+    are_correctly_ordered: F,
+) -> Option<usize>
 where
     C: OrderedCollection<'collection>,
-    F: Fn(&C::Item, &C::Item) -> bool
+    F: Fn(&C::Item, &C::Item) -> bool,
 {
-    collection.iterator()
+    collection
+        .iterator()
         .zip(collection.iterator().skip(1))
         .enumerate()
         .find(|(_, (element, successor))| !are_correctly_ordered(element, successor))
         .map(|(index, _)| index)
 }
 
-fn assert_is_sorted<'collection, C, F>(assert_that: AssertThat<C>, are_correctly_ordered: F,
-    sorting_name: &str) -> AssertThat<C>
+fn assert_is_sorted<'collection, C, F>(
+    assert_that: AssertThat<C>,
+    are_correctly_ordered: F,
+    sorting_name: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: Debug,
-    F: Fn(&C::Item, &C::Item) -> bool
+    F: Fn(&C::Item, &C::Item) -> bool,
 {
     let counter_example_index =
         find_sorting_counter_example_index(&assert_that.data, are_correctly_ordered);
@@ -214,7 +274,7 @@ where
     if let Some(counter_example_index) = counter_example_index {
         let collection_debug = HighlightedCollectionDebug {
             collection: &assert_that.data,
-            highlighted_sections: vec![counter_example_index..(counter_example_index + 2)]
+            highlighted_sections: vec![counter_example_index..(counter_example_index + 2)],
         };
 
         Failure::new(&assert_that)
@@ -229,29 +289,40 @@ where
 impl<'collection, C> OrderedCollectionPartialOrdAssertions for AssertThat<C>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialOrd
+    C::Item: Debug + PartialOrd,
 {
     fn is_sorted_in_ascending_order(self) -> Self {
         assert_is_sorted(self, |element, successor| element <= successor, "ascending")
     }
 
     fn is_sorted_in_strictly_ascending_order(self) -> Self {
-        assert_is_sorted(self, |element, successor| element < successor, "strictly ascending")
+        assert_is_sorted(
+            self,
+            |element, successor| element < successor,
+            "strictly ascending",
+        )
     }
 
     fn is_sorted_in_descending_order(self) -> Self {
-        assert_is_sorted(self, |element, successor| element >= successor, "descending")
+        assert_is_sorted(
+            self,
+            |element, successor| element >= successor,
+            "descending",
+        )
     }
 
     fn is_sorted_in_strictly_descending_order(self) -> Self {
-        assert_is_sorted(self, |element, successor| element > successor, "strictly descending")
+        assert_is_sorted(
+            self,
+            |element, successor| element > successor,
+            "strictly descending",
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::{assert_fails, assert_that};
 
     #[test]

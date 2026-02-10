@@ -4,8 +4,8 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
-use crate::{AssertThat, Failure};
 use crate::num::{Signed, Zero};
+use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with a numeric
 /// argument of a type that can be [Zero]. The blanket implementation also requires [PartialEq] on
@@ -20,7 +20,6 @@ use crate::num::{Signed, Zero};
 /// assert_that!(0).is_zero();
 /// ```
 pub trait ZeroableAssertions {
-
     /// Asserts that the tested value is equal to zero according to the [PartialEq] trait and the
     /// zero-value provided by [Zero].
     fn is_zero(self) -> Self;
@@ -31,7 +30,6 @@ pub trait ZeroableAssertions {
 }
 
 impl<T: Debug + PartialEq + Zero> ZeroableAssertions for AssertThat<T> {
-
     fn is_zero(self) -> Self {
         if self.data != T::ZERO {
             Failure::new(&self)
@@ -45,7 +43,10 @@ impl<T: Debug + PartialEq + Zero> ZeroableAssertions for AssertThat<T> {
 
     fn is_not_zero(self) -> Self {
         if self.data == T::ZERO {
-            Failure::new(&self).expected_it("not to be zero").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be zero")
+                .but_it("was")
+                .fail();
         }
 
         self
@@ -64,7 +65,6 @@ impl<T: Debug + PartialEq + Zero> ZeroableAssertions for AssertThat<T> {
 /// assert_that!(0).is_not_positive().is_not_negative();
 /// ```
 pub trait SignedAssertions {
-
     /// Asserts that the tested value is positive, i.e. strictly greater than [Zero::ZERO].
     fn is_positive(self) -> Self;
 
@@ -81,10 +81,12 @@ pub trait SignedAssertions {
 }
 
 impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
-
     fn is_positive(self) -> Self {
         if self.data.partial_cmp(&T::ZERO) != Some(Ordering::Greater) {
-            Failure::new(&self).expected_it("to be positive").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be positive")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -92,7 +94,10 @@ impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
 
     fn is_not_positive(self) -> Self {
         if self.data > T::ZERO {
-            Failure::new(&self).expected_it("not to be positive").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("not to be positive")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -100,17 +105,23 @@ impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
 
     fn is_negative(self) -> Self {
         if self.data.partial_cmp(&T::ZERO) != Some(Ordering::Less) {
-            Failure::new(&self).expected_it("to be negative").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be negative")
+                .but_it_was_data(&self)
+                .fail();
         }
-        
+
         self
     }
 
     fn is_not_negative(self) -> Self {
         if self.data < T::ZERO {
-            Failure::new(&self).expected_it("not to be negative").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("not to be negative")
+                .but_it_was_data(&self)
+                .fail();
         }
-        
+
         self
     }
 }
@@ -119,7 +130,6 @@ impl<T: Debug + Signed> SignedAssertions for AssertThat<T> {
 mod tests {
 
     use super::*;
-
     use crate::{assert_fails, assert_that};
 
     #[test]

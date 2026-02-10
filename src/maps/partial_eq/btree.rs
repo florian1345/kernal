@@ -26,7 +26,6 @@ use crate::util::multiset::btree::BTreeMultiset;
 ///     .contains_exactly_values_using_ord([200, 100]);
 /// ```
 pub trait MapEqOrdAssertions<'map, M: Map<'map>> {
-
     /// Asserts that for each of the given `values`, the tested map contains an entry with a value
     /// equal to it according to [Eq] and [Ord]. If the provided iterator contains multiple equal
     /// values, this function asserts that the tested map contains at least that number of equal
@@ -57,17 +56,21 @@ impl<'map, M> MapEqOrdAssertions<'map, M> for AssertThat<M>
 where
     M: Map<'map>,
     M::Key: Debug,
-    M::Value: Debug + Eq + Ord
+    M::Value: Debug + Eq + Ord,
 {
     fn contains_values_using_ord<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
 
-        check_contains_values::<_, _, BTreeMultiset<_>>(&self, self.data.values(), &expected_values);
+        check_contains_values::<_, _, BTreeMultiset<_>>(
+            &self,
+            self.data.values(),
+            &expected_values,
+        );
 
         self
     }
@@ -75,13 +78,16 @@ where
     fn contains_exactly_values_using_ord<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
 
         check_contains_exactly_values::<_, _, BTreeMultiset<_>>(
-            &self, self.data.values(), &expected_values);
+            &self,
+            self.data.values(),
+            &expected_values,
+        );
 
         self
     }
@@ -91,10 +97,9 @@ where
 mod tests {
     use std::collections::{BTreeMap, HashMap};
 
-    use crate::{assert_fails, test_contains_exactly_values, test_contains_values};
-    use crate::prelude::*;
-
     use super::*;
+    use crate::prelude::*;
+    use crate::{assert_fails, test_contains_exactly_values, test_contains_values};
 
     test_contains_values!(contains_values_using_ord);
 

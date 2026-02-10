@@ -1,20 +1,20 @@
 //! Contains specialized assertions for [Map]s and whose [Map::Value]s implement [PartialEq]. See
 //! [MapPartialEqAssertions] for more details.
 
-use crate::{AssertThat, Failure};
+use std::borrow::Borrow;
+use std::fmt::Debug;
+
 use crate::collections::CollectionDebug;
 use crate::collections::partial_eq::{
     compute_missing_and_superfluous,
-    format_error_for_missing_and_superfluous
+    format_error_for_missing_and_superfluous,
 };
 use crate::maps::Map;
 use crate::maps::debug::{HighlightedMapDebug, MapDebug, MapEntriesDebug};
-use crate::util::{borrow_all, borrow_all_pairs};
 use crate::util::multiset::Multiset;
 use crate::util::multiset::vec::VecMultiset;
-
-use std::borrow::Borrow;
-use std::fmt::Debug;
+use crate::util::{borrow_all, borrow_all_pairs};
+use crate::{AssertThat, Failure};
 
 pub mod btree;
 pub mod hash;
@@ -34,7 +34,6 @@ pub mod hash;
 ///     .contains_entry("world", 200);
 /// ```
 pub trait MapPartialEqAssertions<'map, M: Map<'map>> {
-
     /// Asserts that the tested map contains an entry with a value equal to the given `value`
     /// according to [PartialEq], mapped to any key.
     fn contains_value<V: Borrow<M::Value>>(self, value: V) -> Self;
@@ -128,17 +127,22 @@ fn get_key<'map, 'reference, M>(map: &'reference M, value: &M::Value) -> Option<
 where
     M: Map<'map>,
     M::Value: PartialEq,
-    'map: 'reference
+    'map: 'reference,
 {
-    map.entries().find(|&(_, map_value)| map_value == value).map(|(key, _)| key)
+    map.entries()
+        .find(|&(_, map_value)| map_value == value)
+        .map(|(key, _)| key)
 }
 
-fn check_violating_key_for_entries_check<'map, M>(assert_that: &AssertThat<M>,
-    violating_key: Option<&M::Key>, entries: &[(&M::Key, &M::Value)], expected_it_prefix: &str)
-where
+fn check_violating_key_for_entries_check<'map, M>(
+    assert_that: &AssertThat<M>,
+    violating_key: Option<&M::Key>,
+    entries: &[(&M::Key, &M::Value)],
+    expected_it_prefix: &str,
+) where
     M: Map<'map>,
     M::Key: Debug,
-    M::Value: Debug
+    M::Value: Debug,
 {
     if let Some(violating_key) = violating_key {
         let map_entries_debug = MapEntriesDebug::<'_, '_, M>::new(entries.iter().cloned());
@@ -148,7 +152,7 @@ where
         if assert_that.data.get(violating_key).is_some() {
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &assert_that.data,
-                highlighted_key: violating_key
+                highlighted_key: violating_key,
             };
 
             failure
@@ -156,59 +160,80 @@ where
                 .fail()
         }
         else {
-            let map_debug = MapDebug { map: &assert_that.data };
+            let map_debug = MapDebug {
+                map: &assert_that.data,
+            };
 
             failure
-                .but_it(format!("was <{:?}>, which is missing the key <{:?}>",
-                    map_debug, violating_key))
+                .but_it(format!(
+                    "was <{:?}>, which is missing the key <{:?}>",
+                    map_debug, violating_key
+                ))
                 .fail()
         }
     }
 }
 
-fn check_contains_values<'map, 'value, M, I, MS>(assert_that: &AssertThat<M>, actual_values: I,
-    expected_values: &'value [&M::Value])
-where
+fn check_contains_values<'map, 'value, M, I, MS>(
+    assert_that: &AssertThat<M>,
+    actual_values: I,
+    expected_values: &'value [&M::Value],
+) where
     M: Map<'map>,
     M::Key: Debug,
     M::Value: Debug + 'value,
     I: Iterator<Item = &'value M::Value>,
-    MS: Multiset<&'value M::Value>
+    MS: Multiset<&'value M::Value>,
 {
     let (missing_values, _) =
         compute_missing_and_superfluous::<_, MS, _>(actual_values, expected_values);
 
     if !missing_values.is_empty() {
-        let values_debug = CollectionDebug { collection: &expected_values };
-        let map_debug = MapDebug { map: &assert_that.data };
+        let values_debug = CollectionDebug {
+            collection: &expected_values,
+        };
+        let map_debug = MapDebug {
+            map: &assert_that.data,
+        };
 
         Failure::new(assert_that)
             .expected_it(format!("to contain all of the values <{:?}>", values_debug))
-            .but_it(format!("was <{:?}>, which lacks {:?}", map_debug, missing_values))
+            .but_it(format!(
+                "was <{:?}>, which lacks {:?}",
+                map_debug, missing_values
+            ))
             .fail();
     }
 }
 
-fn check_contains_exactly_values<'map, 'value, M, I, MS>(assert_that: &AssertThat<M>,
-    actual_values: I, expected_values: &'value [&M::Value])
-where
+fn check_contains_exactly_values<'map, 'value, M, I, MS>(
+    assert_that: &AssertThat<M>,
+    actual_values: I,
+    expected_values: &'value [&M::Value],
+) where
     M: Map<'map>,
     M::Key: Debug,
     M::Value: Debug + 'value,
     I: Iterator<Item = &'value M::Value>,
-    MS: Multiset<&'value M::Value>
+    MS: Multiset<&'value M::Value>,
 {
     let (missing_values, superfluous_values) =
         compute_missing_and_superfluous::<_, MS, _>(actual_values, expected_values);
 
     if !missing_values.is_empty() || !superfluous_values.is_empty() {
-        let expected_values_debug = CollectionDebug { collection: &expected_values };
-        let map_debug = MapDebug { map: &assert_that.data };
-        let error =
-            format_error_for_missing_and_superfluous(&missing_values, &superfluous_values);
+        let expected_values_debug = CollectionDebug {
+            collection: &expected_values,
+        };
+        let map_debug = MapDebug {
+            map: &assert_that.data,
+        };
+        let error = format_error_for_missing_and_superfluous(&missing_values, &superfluous_values);
 
         Failure::new(assert_that)
-            .expected_it(format!("to contain exactly the values <{:?}>", expected_values_debug))
+            .expected_it(format!(
+                "to contain exactly the values <{:?}>",
+                expected_values_debug
+            ))
             .but_it(format!("was <{:?}>, which {}", map_debug, error))
             .fail();
     }
@@ -218,7 +243,7 @@ impl<'map, M> MapPartialEqAssertions<'map, M> for AssertThat<M>
 where
     M: Map<'map>,
     M::Key: Debug,
-    M::Value: Debug + PartialEq
+    M::Value: Debug + PartialEq,
 {
     fn contains_value<V: Borrow<M::Value>>(self, value: V) -> Self {
         let value = value.borrow();
@@ -239,7 +264,7 @@ where
         if let Some(key) = get_key(&self.data, value) {
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: key
+                highlighted_key: key,
             };
 
             Failure::new(&self)
@@ -254,7 +279,7 @@ where
     fn contains_values<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
@@ -267,21 +292,28 @@ where
     fn does_not_contain_values<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
-        let violating_key = expected_values.iter().find_map(|value| get_key(&self.data, value));
+        let violating_key = expected_values
+            .iter()
+            .find_map(|value| get_key(&self.data, value));
 
         if let Some(violating_key) = violating_key {
-            let values_debug = CollectionDebug { collection: &expected_values };
+            let values_debug = CollectionDebug {
+                collection: &expected_values,
+            };
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: violating_key
+                highlighted_key: violating_key,
             };
 
             Failure::new(&self)
-                .expected_it(format!("to contain none of the values <{:?}>", values_debug))
+                .expected_it(format!(
+                    "to contain none of the values <{:?}>",
+                    values_debug
+                ))
                 .but_it(format!("was <{:?}>", highlighted_map_debug))
                 .fail();
         }
@@ -292,13 +324,16 @@ where
     fn contains_exactly_values<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
 
         check_contains_exactly_values::<_, _, VecMultiset<_>>(
-            &self, self.data.values(), &expected_values);
+            &self,
+            self.data.values(),
+            &expected_values,
+        );
 
         self
     }
@@ -306,54 +341,67 @@ where
     fn contains_entry<K, V>(self, key: K, value: V) -> Self
     where
         K: Borrow<M::Key>,
-        V: Borrow<M::Value>
+        V: Borrow<M::Value>,
     {
         let key = key.borrow();
         let expected_value = value.borrow();
-        let failure = Failure::new(&self)
-            .expected_it(
-                format!("to contain the entry <{:?} => {:?}>", key, expected_value));
+        let failure = Failure::new(&self).expected_it(format!(
+            "to contain the entry <{:?} => {:?}>",
+            key, expected_value
+        ));
 
         match self.data.get(key) {
             Some(value) if value == expected_value => self,
             Some(value) => {
                 let highlighted_map_debug = HighlightedMapDebug {
                     map: &self.data,
-                    highlighted_key: key
+                    highlighted_key: key,
                 };
 
                 failure
-                    .but_it(format!("was <{:?}>, which maps the key to the value <{:?}>",
-                        highlighted_map_debug, value))
+                    .but_it(format!(
+                        "was <{:?}>, which maps the key to the value <{:?}>",
+                        highlighted_map_debug, value
+                    ))
                     .fail()
             },
             None => {
                 let map_debug = MapDebug { map: &self.data };
 
                 failure
-                    .but_it(format!("was <{:?}>, which does not contain the key", map_debug))
+                    .but_it(format!(
+                        "was <{:?}>, which does not contain the key",
+                        map_debug
+                    ))
                     .fail()
-            }
+            },
         }
     }
 
     fn does_not_contain_entry<K, V>(self, key: K, value: V) -> Self
     where
         K: Borrow<M::Key>,
-        V: Borrow<M::Value>
+        V: Borrow<M::Value>,
     {
         let key = key.borrow();
         let unexpected_value = value.borrow();
 
-        if self.data.get(key).iter().any(|&value| value == unexpected_value) {
+        if self
+            .data
+            .get(key)
+            .iter()
+            .any(|&value| value == unexpected_value)
+        {
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: key
+                highlighted_key: key,
             };
 
             Failure::new(&self)
-                .expected_it(
-                    format!("not to contain the entry <{:?} => {:?}>", key, unexpected_value))
+                .expected_it(format!(
+                    "not to contain the entry <{:?} => {:?}>",
+                    key, unexpected_value
+                ))
                 .but_it(format!("was <{:?}>", highlighted_map_debug))
                 .fail()
         }
@@ -365,16 +413,26 @@ where
     where
         K: Borrow<M::Key>,
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = (K, V)>
+        I: IntoIterator<Item = (K, V)>,
     {
         let entries_unborrowed = entries.into_iter().collect::<Vec<_>>();
         let entries: Vec<(&M::Key, &M::Value)> = borrow_all_pairs(&entries_unborrowed);
-        let violating_key = entries.iter()
-            .find(|(key, value)| self.data.get(key).iter().all(|&map_value| map_value != *value))
+        let violating_key = entries
+            .iter()
+            .find(|(key, value)| {
+                self.data
+                    .get(key)
+                    .iter()
+                    .all(|&map_value| map_value != *value)
+            })
             .map(|(key, _)| *key);
 
         check_violating_key_for_entries_check(
-            &self, violating_key, &entries, "to contain all of the entries");
+            &self,
+            violating_key,
+            &entries,
+            "to contain all of the entries",
+        );
 
         self
     }
@@ -383,16 +441,26 @@ where
     where
         K: Borrow<M::Key>,
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = (K, V)>
+        I: IntoIterator<Item = (K, V)>,
     {
         let entries_unborrowed = entries.into_iter().collect::<Vec<_>>();
         let entries: Vec<(&M::Key, &M::Value)> = borrow_all_pairs(&entries_unborrowed);
-        let violating_key = entries.iter()
-            .find(|(key, value)| self.data.get(key).iter().any(|&map_value| map_value == *value))
+        let violating_key = entries
+            .iter()
+            .find(|(key, value)| {
+                self.data
+                    .get(key)
+                    .iter()
+                    .any(|&map_value| map_value == *value)
+            })
             .map(|(key, _)| *key);
 
         check_violating_key_for_entries_check(
-            &self, violating_key, &entries, "not to contain any of the entries");
+            &self,
+            violating_key,
+            &entries,
+            "not to contain any of the entries",
+        );
 
         self
     }
@@ -401,39 +469,58 @@ where
     where
         K: Borrow<M::Key>,
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = (K, V)>
+        I: IntoIterator<Item = (K, V)>,
     {
         let entries_unborrowed = entries.into_iter().collect::<Vec<_>>();
         let entries: Vec<(&M::Key, &M::Value)> = borrow_all_pairs(&entries_unborrowed);
         let mut distinct_keys = Vec::new();
-        let key_of_wrong_or_missing_entry = entries.iter().cloned()
+        let key_of_wrong_or_missing_entry = entries
+            .iter()
+            .cloned()
             .find(|(key, value)| {
-                if !distinct_keys.iter().any(|&distinct_key| M::are_keys_equal(distinct_key, key)) {
+                if !distinct_keys
+                    .iter()
+                    .any(|&distinct_key| M::are_keys_equal(distinct_key, key))
+                {
                     distinct_keys.push(key);
                 }
 
-                self.data.get(key).iter().all(|&map_value| map_value != *value)
+                self.data
+                    .get(key)
+                    .iter()
+                    .all(|&map_value| map_value != *value)
             })
             .map(|(key, _)| key);
 
         check_violating_key_for_entries_check(
-            &self, key_of_wrong_or_missing_entry, &entries, "to contain exactly the entries");
+            &self,
+            key_of_wrong_or_missing_entry,
+            &entries,
+            "to contain exactly the entries",
+        );
 
-        let superfluous_key: Option<&M::Key> = self.data.keys()
-            .find(|map_key| !distinct_keys.iter()
-                .any(|distinct_key| M::are_keys_equal(map_key, distinct_key)));
+        let superfluous_key: Option<&M::Key> = self.data.keys().find(|map_key| {
+            !distinct_keys
+                .iter()
+                .any(|distinct_key| M::are_keys_equal(map_key, distinct_key))
+        });
 
         if let Some(superfluous_key) = superfluous_key {
             let map_entries_debug = MapEntriesDebug::<'_, '_, M>::new(entries.iter().cloned());
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
-                highlighted_key: superfluous_key
+                highlighted_key: superfluous_key,
             };
 
             Failure::new(&self)
-                .expected_it(format!("to contain exactly the entries <{:?}>", map_entries_debug))
-                .but_it(format!("was <{:?}>, which additionally contains the key <{:?}>",
-                    highlighted_map_debug, superfluous_key))
+                .expected_it(format!(
+                    "to contain exactly the entries <{:?}>",
+                    map_entries_debug
+                ))
+                .but_it(format!(
+                    "was <{:?}>, which additionally contains the key <{:?}>",
+                    highlighted_map_debug, superfluous_key
+                ))
                 .fail()
         }
 
@@ -445,9 +532,9 @@ where
 mod tests {
     use std::collections::{BTreeMap, HashMap};
 
+    use super::*;
     use crate::assert_fails;
     use crate::prelude::*;
-    use super::*;
 
     #[test]
     fn contains_value_passes_for_singleton_map() {
@@ -461,8 +548,12 @@ mod tests {
 
     #[test]
     fn contains_value_passes_for_map_with_multiple_values_including_expected_one() {
-        assert_that!(BTreeMap::from([("apple", 41), ("banana", 42), ("cherry", 43)]))
-            .contains_value(42);
+        assert_that!(BTreeMap::from([
+            ("apple", 41),
+            ("banana", 42),
+            ("cherry", 43)
+        ]))
+        .contains_value(42);
     }
 
     #[test]
@@ -499,8 +590,12 @@ mod tests {
 
     #[test]
     fn does_not_contain_value_passes_for_map_with_multiple_different_values() {
-        assert_that!(BTreeMap::from([("apple", 39), ("banana", 40), ("cherry", 41)]))
-            .does_not_contain_value(42);
+        assert_that!(BTreeMap::from([
+            ("apple", 39),
+            ("banana", 40),
+            ("cherry", 41)
+        ]))
+        .does_not_contain_value(42);
     }
 
     #[test]
@@ -742,8 +837,12 @@ mod tests {
 
     #[test]
     fn contains_entry_passes_for_larger_map_with_correct_entry() {
-        assert_that!(HashMap::from([("apple", 41), ("banana", 42), ("cherry", 43)]))
-            .contains_entry("banana", 42);
+        assert_that!(HashMap::from([
+            ("apple", 41),
+            ("banana", 42),
+            ("cherry", 43)
+        ]))
+        .contains_entry("banana", 42);
     }
 
     #[test]
@@ -810,8 +909,12 @@ mod tests {
 
     #[test]
     fn does_not_contain_entry_passes_for_larger_map_with_incorrect_value_for_correct_key() {
-        assert_that!(BTreeMap::from([("apple", 42), ("banana", 41), ("cherry", 42)]))
-            .does_not_contain_entry("banana", 42);
+        assert_that!(BTreeMap::from([
+            ("apple", 42),
+            ("banana", 41),
+            ("cherry", 42)
+        ]))
+        .does_not_contain_entry("banana", 42);
     }
 
     #[test]
@@ -926,8 +1029,11 @@ mod tests {
 
     #[test]
     fn contains_exactly_entries_passes_for_duplicated_expected_entry_and_correct_map() {
-        assert_that!(HashMap::from([("apple", 1), ("banana", 2)]))
-            .contains_exactly_entries([("banana", 2), ("apple", 1), ("banana", 2)]);
+        assert_that!(HashMap::from([("apple", 1), ("banana", 2)])).contains_exactly_entries([
+            ("banana", 2),
+            ("apple", 1),
+            ("banana", 2),
+        ]);
     }
 
     #[test]

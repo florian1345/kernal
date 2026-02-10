@@ -13,7 +13,6 @@ use crate::{AssertThat, Failure};
 /// number types of the standard library. Used to allow assertions defined by
 /// [AbsDiffPartialOrdAssertions].
 pub trait AbsDiff {
-
     /// The type returned by the absolute difference operation.
     type ReturnType;
 
@@ -25,14 +24,13 @@ pub trait AbsDiff {
 macro_rules! impl_abs_diff {
     ($type:ty, $return_type:ty) => {
         impl AbsDiff for $type {
-
             type ReturnType = $return_type;
 
             fn abs_diff(&self, other: &$type) -> $return_type {
                 <$type>::abs_diff(*self, *other)
             }
         }
-    }
+    };
 }
 
 impl_abs_diff!(u8, u8);
@@ -49,7 +47,6 @@ impl_abs_diff!(i128, u128);
 impl_abs_diff!(isize, usize);
 
 impl AbsDiff for f32 {
-
     type ReturnType = f32;
 
     fn abs_diff(&self, other: &f32) -> f32 {
@@ -58,7 +55,6 @@ impl AbsDiff for f32 {
 }
 
 impl AbsDiff for f64 {
-
     type ReturnType = f64;
 
     fn abs_diff(&self, other: &f64) -> f64 {
@@ -80,7 +76,6 @@ impl AbsDiff for f64 {
 ///     .is_not_close_to(0.3, 0.1);
 /// ```
 pub trait AbsDiffPartialOrdAssertions<T: AbsDiff> {
-
     /// Asserts that the tested value is within `offset` of the given `expected` value. That is,
     /// the difference between the tested value and `expected` must be less than or equal to
     /// `offset`.
@@ -102,12 +97,12 @@ pub trait AbsDiffPartialOrdAssertions<T: AbsDiff> {
 impl<T> AbsDiffPartialOrdAssertions<T> for AssertThat<T>
 where
     T: AbsDiff + Debug,
-    T::ReturnType: Debug + PartialOrd
+    T::ReturnType: Debug + PartialOrd,
 {
     fn is_close_to<E, O>(self, expected: E, offset: O) -> Self
     where
         E: Borrow<T>,
-        O: Borrow<T::ReturnType>
+        O: Borrow<T::ReturnType>,
     {
         let expected = expected.borrow();
         let offset = offset.borrow();
@@ -116,7 +111,10 @@ where
         if matches!(abs_diff.partial_cmp(offset), None | Some(Ordering::Greater)) {
             Failure::new(&self)
                 .expected_it(format!("to be within <{:?}> of <{:?}>", offset, expected))
-                .but_it(format!("was <{:?}>, which is outside that range", &self.data))
+                .but_it(format!(
+                    "was <{:?}>, which is outside that range",
+                    &self.data
+                ))
                 .fail();
         }
 
@@ -126,7 +124,7 @@ where
     fn is_not_close_to<E, O>(self, expected: E, offset: O) -> Self
     where
         E: Borrow<T>,
-        O: Borrow<T::ReturnType>
+        O: Borrow<T::ReturnType>,
     {
         let expected = expected.borrow();
         let offset = offset.borrow();
@@ -134,8 +132,14 @@ where
 
         if &abs_diff <= offset {
             Failure::new(&self)
-                .expected_it(format!("not to be within <{:?}> of <{:?}>", offset, expected))
-                .but_it(format!("was <{:?}>, which is inside that range", &self.data))
+                .expected_it(format!(
+                    "not to be within <{:?}> of <{:?}>",
+                    offset, expected
+                ))
+                .but_it(format!(
+                    "was <{:?}>, which is inside that range",
+                    &self.data
+                ))
                 .fail();
         }
 
@@ -146,9 +150,8 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_close_to_passes_for_integer_less_than_target_by_offset() {

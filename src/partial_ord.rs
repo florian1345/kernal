@@ -21,7 +21,6 @@ use crate::{AssertThat, Failure};
 ///     .is_not_comparable_to(f32::NAN);
 /// ```
 pub trait PartialOrdAssertions<T> {
-
     /// Asserts that the tested value is less than the given `other` value according to
     /// [PartialOrd::partial_cmp], i.e. [Ordering::Less].
     fn is_less_than<E: Borrow<T>>(self, other: E) -> Self;
@@ -52,15 +51,19 @@ fn describe_ordering(ordering: Option<Ordering>) -> &'static str {
         Some(Ordering::Less) => "less",
         Some(Ordering::Equal) => "equal",
         Some(Ordering::Greater) => "greater",
-        None => "not comparable"
+        None => "not comparable",
     }
 }
 
-fn assert_ordering_of_data_compared_to_other_to_be_in_list<T, E>(assert_that: AssertThat<T>,
-    other: E, accepted_orderings: &[Option<Ordering>], description: &str) -> AssertThat<T>
+fn assert_ordering_of_data_compared_to_other_to_be_in_list<T, E>(
+    assert_that: AssertThat<T>,
+    other: E,
+    accepted_orderings: &[Option<Ordering>],
+    description: &str,
+) -> AssertThat<T>
 where
     T: Debug + PartialOrd,
-    E: Borrow<T>
+    E: Borrow<T>,
 {
     let other = other.borrow();
     let ordering = assert_that.data.partial_cmp(other);
@@ -70,7 +73,10 @@ where
 
         Failure::new(&assert_that)
             .expected_it(format!("to be {} <{:?}>", description, other))
-            .but_it(format!("was <{:?}>, which is {}", &assert_that.data, ordering_description))
+            .but_it(format!(
+                "was <{:?}>, which is {}",
+                &assert_that.data, ordering_description
+            ))
             .fail();
     }
 
@@ -78,45 +84,70 @@ where
 }
 
 impl<T: Debug + PartialOrd> PartialOrdAssertions<T> for AssertThat<T> {
-
     fn is_less_than<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[Some(Ordering::Less)], "less than")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[Some(Ordering::Less)],
+            "less than",
+        )
     }
 
     fn is_less_than_or_equal_to<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[Some(Ordering::Less), Some(Ordering::Equal)], "less than or equal to")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[Some(Ordering::Less), Some(Ordering::Equal)],
+            "less than or equal to",
+        )
     }
 
     fn is_greater_than<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[Some(Ordering::Greater)], "greater than")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[Some(Ordering::Greater)],
+            "greater than",
+        )
     }
 
     fn is_greater_than_or_equal_to<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[Some(Ordering::Greater), Some(Ordering::Equal)], "greater than or equal to")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[Some(Ordering::Greater), Some(Ordering::Equal)],
+            "greater than or equal to",
+        )
     }
 
     fn is_comparable_to<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[Some(Ordering::Greater), Some(Ordering::Equal), Some(Ordering::Less)],
-            "comparable to")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[
+                Some(Ordering::Greater),
+                Some(Ordering::Equal),
+                Some(Ordering::Less),
+            ],
+            "comparable to",
+        )
     }
 
     fn is_not_comparable_to<E: Borrow<T>>(self, other: E) -> Self {
-        assert_ordering_of_data_compared_to_other_to_be_in_list(self, other,
-            &[None], "uncomparable to")
+        assert_ordering_of_data_compared_to_other_to_be_in_list(
+            self,
+            other,
+            &[None],
+            "uncomparable to",
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_less_than_passes_for_lower_integer() {
@@ -143,7 +174,7 @@ mod tests {
             expected it "to be less than <1.0>"
             but it "was <NaN>, which is not comparable");
     }
-    
+
     #[test]
     fn is_less_than_or_equal_to_passes_for_lower_integer() {
         assert_that!(3).is_less_than_or_equal_to(4);

@@ -27,7 +27,6 @@ use crate::util::multiset::hash::HashMultiset;
 ///     .contains_exactly_values_using_hash([200, 100]);
 /// ```
 pub trait MapEqHashAssertions<'map, M: Map<'map>> {
-
     /// Asserts that for each of the given `values`, the tested map contains an entry with a value
     /// equal to it according to [Eq] and [Hash]. If the provided iterator contains multiple equal
     /// values, this function asserts that the tested map contains at least that number of equal
@@ -58,12 +57,12 @@ impl<'map, M> MapEqHashAssertions<'map, M> for AssertThat<M>
 where
     M: Map<'map>,
     M::Key: Debug,
-    M::Value: Debug + Eq + Hash
+    M::Value: Debug + Eq + Hash,
 {
     fn contains_values_using_hash<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
@@ -76,13 +75,16 @@ where
     fn contains_exactly_values_using_hash<V, I>(self, values: I) -> Self
     where
         V: Borrow<M::Value>,
-        I: IntoIterator<Item = V>
+        I: IntoIterator<Item = V>,
     {
         let expected_values_unborrowed = values.into_iter().collect::<Vec<_>>();
         let expected_values: Vec<&M::Value> = borrow_all(&expected_values_unborrowed);
 
         check_contains_exactly_values::<_, _, HashMultiset<_>>(
-            &self, self.data.values(), &expected_values);
+            &self,
+            self.data.values(),
+            &expected_values,
+        );
 
         self
     }
@@ -90,11 +92,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{assert_fails, test_contains_values, test_contains_exactly_values};
-    use crate::prelude::*;
-
     use std::collections::{BTreeMap, HashMap};
+
+    use super::*;
+    use crate::prelude::*;
+    use crate::{assert_fails, test_contains_exactly_values, test_contains_values};
 
     test_contains_values!(contains_values_using_hash);
 

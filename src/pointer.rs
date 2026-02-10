@@ -7,21 +7,18 @@ use crate::{AssertThat, Failure};
 
 /// A trait blanket-implemented for all raw pointer types - `*const T` and `*mut T` for all `T`. It
 /// defines queries used to make assertions defined in [PointerAssertions].
-pub trait Pointer : Copy {
-
+pub trait Pointer: Copy {
     /// Indicates whether this pointer is a null pointer ([std::ptr::null] or [std::ptr::null_mut]).
     fn is_null(self) -> bool;
 }
 
 impl<T: ?Sized> Pointer for *const T {
-
     fn is_null(self) -> bool {
         <*const T>::is_null(self)
     }
 }
 
 impl<T: ?Sized> Pointer for *mut T {
-
     fn is_null(self) -> bool {
         <*mut T>::is_null(self)
     }
@@ -42,7 +39,6 @@ impl<T: ?Sized> Pointer for *mut T {
 /// assert_that!(&0 as *const i32).is_not_null();
 /// ```
 pub trait PointerAssertions {
-
     /// Asserts that the tested pointer is a null pointer.
     fn is_null(self) -> Self;
 
@@ -51,7 +47,6 @@ pub trait PointerAssertions {
 }
 
 impl<T: Debug + Pointer> PointerAssertions for AssertThat<T> {
-
     fn is_null(self) -> Self {
         if !self.data.is_null() {
             Failure::new(&self)
@@ -65,7 +60,10 @@ impl<T: Debug + Pointer> PointerAssertions for AssertThat<T> {
 
     fn is_not_null(self) -> Self {
         if self.data.is_null() {
-            Failure::new(&self).expected_it("not to be null").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be null")
+                .but_it("was")
+                .fail();
         }
 
         self
@@ -75,11 +73,10 @@ impl<T: Debug + Pointer> PointerAssertions for AssertThat<T> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-
-    use crate::{assert_fails, assert_that};
-
     use std::ptr;
+
+    use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_null_passes_for_null() {
