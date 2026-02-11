@@ -3,9 +3,9 @@
 
 use std::collections::{BTreeSet, LinkedList, VecDeque};
 use std::fmt::Debug;
-use crate::{AssertThat, Failure};
 
 use crate::collections::{Collection, CollectionDebug};
+use crate::{AssertThat, Failure};
 
 /// A marker trait for ordered [Collection]s whose item ordering is deliberate, specified by the
 /// iteration order of [Collection::iterator]. It is implemented for all ordered collection types of
@@ -24,20 +24,20 @@ impl<'collection, T: 'collection> OrderedCollection<'collection> for LinkedList<
 
 impl<'collection, T: 'collection> OrderedCollection<'collection> for BTreeSet<T> {}
 
-impl<'collection, C> OrderedCollection<'collection> for &C
-where
+impl<'collection, C> OrderedCollection<'collection> for &C where
     C: OrderedCollection<'collection> + ?Sized
-{}
+{
+}
 
-impl<'collection, C> OrderedCollection<'collection> for &mut C
-where
+impl<'collection, C> OrderedCollection<'collection> for &mut C where
     C: OrderedCollection<'collection> + ?Sized
-{}
+{
+}
 
-impl<'collection, C> OrderedCollection<'collection> for Box<C>
-where
+impl<'collection, C> OrderedCollection<'collection> for Box<C> where
     C: OrderedCollection<'collection> + ?Sized
-{}
+{
+}
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [OrderedCollection] trait. The [Collection::Item] type must
@@ -56,7 +56,7 @@ where
 /// ```
 pub trait OrderedCollectionAssertions<'collection, C>
 where
-    C: OrderedCollection<'collection>
+    C: OrderedCollection<'collection>,
 {
     /// Asserts that each item in the tested collection satisfies the assertion at the corresponding
     /// position in the given `assertions` slice, that is, the assertion runs without panicking. The
@@ -72,7 +72,7 @@ where
 impl<'collection, C> OrderedCollectionAssertions<'collection, C> for AssertThat<C>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug
+    C::Item: Debug,
 {
     fn satisfies_exactly_in_given_order(self, assertions: &[Box<dyn Fn(&C::Item)>]) -> Self {
         let len = self.data.len();
@@ -80,10 +80,17 @@ where
 
         if len != expected_len {
             Failure::new(&self)
-                .expected_it(format!("to satisfy exactly in the given order <{}> given assertions",
-                    expected_len))
-                .but_it(format!("had <{}> items, namely <{:?}>",
-                    len, CollectionDebug { collection: &self.data }))
+                .expected_it(format!(
+                    "to satisfy exactly in the given order <{}> given assertions",
+                    expected_len
+                ))
+                .but_it(format!(
+                    "had <{}> items, namely <{:?}>",
+                    len,
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail()
         }
 
@@ -141,7 +148,6 @@ macro_rules! dyn_assertions {
 mod tests {
 
     use super::*;
-
     use crate::assert_fails;
     use crate::prelude::*;
 
@@ -152,10 +158,11 @@ mod tests {
 
     #[test]
     fn satisfies_exactly_in_given_order_passes_with_non_empty_collections() {
-        assert_that!(["hello", "world"] as [&str; 2]).satisfies_exactly_in_given_order(dyn_assertions!(
-            |item| assert_that!(item).starts_with("h"),
-            |item| assert_that!(item).starts_with("w")
-        ));
+        assert_that!(["hello", "world"] as [&str; 2]).satisfies_exactly_in_given_order(
+            dyn_assertions!(|item| assert_that!(item).starts_with("h"), |item| {
+                assert_that!(item).starts_with("w")
+            }),
+        );
     }
 
     #[test]
@@ -181,29 +188,34 @@ mod tests {
         assert_that!(|| {
             assert_that!(["hello", "world"]).satisfies_exactly_in_given_order(dyn_assertions!(
                 |_| panic!("first assertion failed"),
-                |_| { }
+                |_| {}
             ));
-        }).panics_with_message("first assertion failed");
+        })
+        .panics_with_message("first assertion failed");
     }
 
     #[test]
     fn satisfies_exactly_in_given_order_fails_if_second_assertion_fails() {
         assert_that!(|| {
-            assert_that!(["hello", "world"]).satisfies_exactly_in_given_order(dyn_assertions!(
-                |_| { },
-                |_| panic!("second assertion failed")
-            ));
-        }).panics_with_message("second assertion failed");
+            assert_that!(["hello", "world"])
+                .satisfies_exactly_in_given_order(dyn_assertions!(|_| {}, |_| panic!(
+                    "second assertion failed"
+                )));
+        })
+        .panics_with_message("second assertion failed");
     }
 
     #[test]
     fn satisfies_exactly_in_given_order_fails_for_real_assertion_failure() {
         assert_that!(|| {
-            assert_that!(["apple", "banana", "cherry"]).satisfies_exactly_in_given_order(dyn_assertions!(
-                |&item| assert_that!(item).has_char_length(5),
-                |&item| assert_that!(item).ends_with("na"),
-                |&item| assert_that!(item).is_equal_to("cucumber")
-            ));
-        }).panics();
+            assert_that!(["apple", "banana", "cherry"]).satisfies_exactly_in_given_order(
+                dyn_assertions!(
+                    |&item| assert_that!(item).has_char_length(5),
+                    |&item| assert_that!(item).ends_with("na"),
+                    |&item| assert_that!(item).is_equal_to("cucumber")
+                ),
+            );
+        })
+        .panics();
     }
 }

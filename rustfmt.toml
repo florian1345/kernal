@@ -1,0 +1,15 @@
+edition = "2024"
+style_edition = "2024"
+
+comment_width = 100
+max_width = 100
+wrap_comments = true
+
+newline_style = "Unix"
+
+group_imports = "StdExternalCrate"
+imports_granularity = "Module"
+imports_layout = "HorizontalVertical"
+
+control_brace_style = "ClosingNextLine"
+match_block_trailing_comma = true

@@ -11,7 +11,6 @@ use crate::{AssertThat, Failure};
 /// A trait for all types of locks which can be poisoned. It is implemented for the standard library
 /// types [Mutex] and [RwLock] and references thereof.
 pub trait Lock {
-
     /// Indicates whether this lock is poisoned, i.e. a thread holding the lock panicked before
     /// releasing it. See [Mutex::is_poisoned] for more details.
     fn is_poisoned(&self) -> bool;
@@ -24,7 +23,7 @@ macro_rules! impl_lock {
                 <$type<T>>::is_poisoned(self)
             }
         }
-    }
+    };
 }
 
 impl_lock!(Mutex);
@@ -37,7 +36,7 @@ macro_rules! impl_lock_ref {
                 L::is_poisoned(self.borrow())
             }
         }
-    }
+    };
 }
 
 impl_lock_ref!(&L);
@@ -75,7 +74,6 @@ impl<L: Clone + Lock> Lock for Cow<'_, L> {
 /// assert_that!(poisoned_mutex).is_poisoned();
 /// ```
 pub trait LockAssertions<T> {
-
     /// Asserts that the tested lock is poisoned, i.e. [Lock::is_poisoned] returns `true`, meaning
     /// some thread panicked before releasing the lock.
     fn is_poisoned(self) -> Self;
@@ -86,10 +84,12 @@ pub trait LockAssertions<T> {
 }
 
 impl<L: Lock> LockAssertions<L> for AssertThat<L> {
-
     fn is_poisoned(self) -> Self {
         if !self.data.is_poisoned() {
-            Failure::new(&self).expected_it("to be poisoned").but_it("was not").fail();
+            Failure::new(&self)
+                .expected_it("to be poisoned")
+                .but_it("was not")
+                .fail();
         }
 
         self
@@ -97,18 +97,23 @@ impl<L: Lock> LockAssertions<L> for AssertThat<L> {
 
     fn is_not_poisoned(self) -> Self {
         if self.data.is_poisoned() {
-            Failure::new(&self).expected_it("not to be poisoned").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be poisoned")
+                .but_it("was")
+                .fail();
         }
 
         self
     }
 }
 
-fn fail_due_to_try_lock_error<G>(failure_with_expectation: Failure,
-        try_lock_error: TryLockError<G>) -> ! {
+fn fail_due_to_try_lock_error<G>(
+    failure_with_expectation: Failure,
+    try_lock_error: TryLockError<G>,
+) -> ! {
     match try_lock_error {
         TryLockError::WouldBlock => failure_with_expectation.but_it("did not").fail(),
-        TryLockError::Poisoned(_) => failure_with_expectation.but_it("was poisoned").fail()
+        TryLockError::Poisoned(_) => failure_with_expectation.but_it("was poisoned").fail(),
     }
 }
 
@@ -129,7 +134,6 @@ fn fail_due_to_try_lock_error<G>(failure_with_expectation: Failure,
 /// assert_that!(&locked_mutex).blocks_locking();
 /// ```
 pub trait MutexAssertions<T> {
-
     /// Asserts that the tested mutex can currently be locked, i.e. no lock is being held.
     fn allows_locking(self) -> Self;
 
@@ -138,7 +142,6 @@ pub trait MutexAssertions<T> {
 }
 
 impl<T, M: Borrow<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
-
     fn allows_locking(self) -> Self {
         if let Err(error) = self.data.borrow().try_lock() {
             let failure = Failure::new(&self).expected_it("to allow acquisition of the lock");
@@ -155,7 +158,7 @@ impl<T, M: Borrow<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
         match self.data.borrow().try_lock() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
-            _ => { }
+            _ => {},
         }
 
         self
@@ -177,7 +180,6 @@ impl<T, M: Borrow<Mutex<T>>> MutexAssertions<T> for AssertThat<M> {
 /// assert_that!(&read_locked_lock).allows_reading().blocks_writing();
 /// ```
 pub trait RwLockAssertions<T> {
-
     /// Asserts that a read-lock can currently be acquired on the tested RW-lock, i.e. no write-lock
     /// is being held.
     fn allows_reading(self) -> Self;
@@ -196,7 +198,6 @@ pub trait RwLockAssertions<T> {
 }
 
 impl<T, R: Borrow<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
-
     fn allows_reading(self) -> Self {
         if let Err(error) = self.data.borrow().try_read() {
             let failure = Failure::new(&self).expected_it("to allow acquisition of a read lock");
@@ -213,7 +214,7 @@ impl<T, R: Borrow<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
         match self.data.borrow().try_read() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
-            _ => { }
+            _ => {},
         }
 
         self
@@ -235,7 +236,7 @@ impl<T, R: Borrow<RwLock<T>>> RwLockAssertions<T> for AssertThat<R> {
         match self.data.borrow().try_write() {
             Ok(_) => failure.but_it("did not").fail(),
             Err(error @ TryLockError::Poisoned(_)) => fail_due_to_try_lock_error(failure, error),
-            _ => { }
+            _ => {},
         }
 
         self
@@ -249,7 +250,6 @@ mod tests {
     use std::thread;
 
     use super::*;
-
     use crate::{assert_fails, assert_that};
 
     fn fresh_mutex() -> Arc<Mutex<i32>> {
@@ -263,7 +263,8 @@ mod tests {
         let _ = thread::spawn(move || {
             let _guard = mutex_clone.lock().unwrap();
             panic!()
-        }).join();
+        })
+        .join();
 
         mutex
     }
@@ -279,7 +280,8 @@ mod tests {
         let _ = thread::spawn(move || {
             let _guard = rw_lock_clone.write().unwrap();
             panic!()
-        }).join();
+        })
+        .join();
 
         rw_lock
     }

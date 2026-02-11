@@ -4,8 +4,8 @@
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-use crate::{AssertThat, Failure};
 use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug};
+use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [Collection] trait and whose [Collection::Item] type implements
@@ -19,7 +19,6 @@ use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug
 /// assert_that!([3, 1, 4, 1]).has_maximum(4).does_not_have_minimum(0);
 /// ```
 pub trait CollectionOrdAssertions<'collection, C: Collection<'collection>> {
-
     /// Asserts that the tested collection contains an item equal to `max` according to [PartialEq]
     /// and that all other items are less than or equal to that value according to [Ord].
     fn has_maximum<M: Borrow<C::Item>>(self, max: M) -> Self;
@@ -37,52 +36,72 @@ pub trait CollectionOrdAssertions<'collection, C: Collection<'collection>> {
     fn does_not_have_minimum<M: Borrow<C::Item>>(self, min: M) -> Self;
 }
 
-fn verify_has_extreme<'collection, C, M>(assert_that: &AssertThat<C>, expected_extreme: M,
-    actual_extreme: Option<&C::Item>, extreme_name: &str)
-where
+fn verify_has_extreme<'collection, C, M>(
+    assert_that: &AssertThat<C>,
+    expected_extreme: M,
+    actual_extreme: Option<&C::Item>,
+    extreme_name: &str,
+) where
     C: Collection<'collection>,
     C::Item: Debug + Ord,
-    M: Borrow<C::Item>
+    M: Borrow<C::Item>,
 {
     let expected_extreme = expected_extreme.borrow();
-    let failure = Failure::new(assert_that)
-        .expected_it(format!("to have the {} <{:?}>", extreme_name, expected_extreme));
+    let failure = Failure::new(assert_that).expected_it(format!(
+        "to have the {} <{:?}>",
+        extreme_name, expected_extreme
+    ));
 
     match actual_extreme {
-        Some(extreme) if extreme == expected_extreme => { }
+        Some(extreme) if extreme == expected_extreme => {},
         Some(extreme) => {
-            let collection_debug = CollectionDebug { collection: &assert_that.data };
+            let collection_debug = CollectionDebug {
+                collection: &assert_that.data,
+            };
 
             failure
                 .but_it(format!(
-                    "was <{:?}>, which has the {} <{:?}>", collection_debug, extreme_name, extreme))
+                    "was <{:?}>, which has the {} <{:?}>",
+                    collection_debug, extreme_name, extreme
+                ))
                 .fail()
-        }
-        None => failure.but_it("was empty").fail()
+        },
+        None => failure.but_it("was empty").fail(),
     }
 }
 
-fn verify_does_not_have_extreme<'collection, C, M>(assert_that: &AssertThat<C>,
-    unexpected_extreme: M, actual_extreme: Option<&C::Item>, extreme_name: &str)
-where
+fn verify_does_not_have_extreme<'collection, C, M>(
+    assert_that: &AssertThat<C>,
+    unexpected_extreme: M,
+    actual_extreme: Option<&C::Item>,
+    extreme_name: &str,
+) where
     C: Collection<'collection>,
     C::Item: Debug + Ord,
-    M: Borrow<C::Item>
+    M: Borrow<C::Item>,
 {
     let unexpected_extreme = unexpected_extreme.borrow();
 
     if actual_extreme == Some(unexpected_extreme) {
         let actual_extreme = actual_extreme.unwrap();
-        let actual_extreme_index = assert_that.data.iterator().enumerate()
+        let actual_extreme_index = assert_that
+            .data
+            .iterator()
+            .enumerate()
             .find(|&(_, item)| item == actual_extreme)
             .map(|(index, _)| index)
             .unwrap();
         let highlighted_collection_debug =
             HighlightedCollectionDebug::with_single_highlighted_element(
-                &assert_that.data, actual_extreme_index);
+                &assert_that.data,
+                actual_extreme_index,
+            );
 
         Failure::new(assert_that)
-            .expected_it(format!("not to have the {} <{:?}>", extreme_name, unexpected_extreme))
+            .expected_it(format!(
+                "not to have the {} <{:?}>",
+                extreme_name, unexpected_extreme
+            ))
             .but_it(format!("was <{:?}>", highlighted_collection_debug))
             .fail()
     }
@@ -91,7 +110,7 @@ where
 impl<'collection, C> CollectionOrdAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug + Ord
+    C::Item: Debug + Ord,
 {
     fn has_maximum<M: Borrow<C::Item>>(self, max: M) -> Self {
         verify_has_extreme(&self, max, self.data.iterator().max(), "maximum");
@@ -120,9 +139,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn has_maximum_passes_for_correct_maximum() {

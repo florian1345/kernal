@@ -12,7 +12,7 @@ use crate::collections::Collection;
 use crate::collections::partial_eq::{
     check_contains_all_of,
     check_contains_exactly_in_any_order,
-    check_contains_none_of
+    check_contains_none_of,
 };
 use crate::util::borrow_all;
 use crate::util::multiset::hash::HashMultiset;
@@ -34,7 +34,7 @@ use crate::util::multiset::hash::HashMultiset;
 /// ```
 pub trait CollectionEqHashAssertions<'collection, C>
 where
-    C: Collection<'collection>
+    C: Collection<'collection>,
 {
     /// Asserts that for each of the given `items`, the tested collection contains an equal element
     /// according to [Eq] and [Hash]. If the provided iterator contains multiple equal elements,
@@ -75,17 +75,21 @@ where
 impl<'collection, C> CollectionEqHashAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug + Eq + Hash
+    C::Item: Debug + Eq + Hash,
 {
     fn contains_all_of_using_hash<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
 
-        check_contains_all_of::<_, _, HashMultiset<_>>(&self, self.data.iterator(), &expected_items);
+        check_contains_all_of::<_, _, HashMultiset<_>>(
+            &self,
+            self.data.iterator(),
+            &expected_items,
+        );
 
         self
     }
@@ -93,7 +97,7 @@ where
     fn contains_none_of_using_hash<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         let unexpected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let unexpected_items: Vec<&C::Item> = borrow_all(&unexpected_items_unborrowed);
@@ -106,13 +110,16 @@ where
     fn contains_exactly_in_any_order_using_hash<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
 
         check_contains_exactly_in_any_order::<_, _, HashMultiset<_>>(
-            &self, self.data.iterator(), &expected_items);
+            &self,
+            self.data.iterator(),
+            &expected_items,
+        );
 
         self
     }
@@ -121,15 +128,14 @@ where
 #[cfg(test)]
 mod tests {
 
+    use super::*;
+    use crate::prelude::*;
     use crate::{
         assert_fails,
         test_contains_all_of,
         test_contains_exactly_in_any_order,
-        test_contains_none_of
+        test_contains_none_of,
     };
-    use crate::prelude::*;
-
-    use super::*;
 
     test_contains_all_of!(contains_all_of_using_hash);
 

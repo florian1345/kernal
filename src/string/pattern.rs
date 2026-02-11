@@ -17,7 +17,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!("I like trains").starts_with("I like").does_not_contain("cars");
 /// ```
 pub trait StringPatternAssertions {
-
     /// Asserts that the tested string contains the given `substring`, i.e. some slice of the tested
     /// string is equal to the substring.
     fn contains<S: AsRef<str>>(self, substring: S) -> Self;
@@ -50,7 +49,6 @@ pub trait StringPatternAssertions {
 }
 
 impl<T: AsRef<str>> StringPatternAssertions for AssertThat<T> {
-
     fn contains<S: AsRef<str>>(self, substring: S) -> Self {
         let string = self.data.as_ref();
         let substring = substring.as_ref();
@@ -70,8 +68,12 @@ impl<T: AsRef<str>> StringPatternAssertions for AssertThat<T> {
         let substring = substring.as_ref();
 
         if let Some(byte_index) = string.find(substring) {
-            let highlighted = format!("{}[{}]{}",
-                &string[..byte_index], substring, &string[(byte_index + substring.len())..]);
+            let highlighted = format!(
+                "{}[{}]{}",
+                &string[..byte_index],
+                substring,
+                &string[(byte_index + substring.len())..]
+            );
 
             Failure::new(&self)
                 .expected_it(format!("not to contain <{}>", substring.escape_debug()))

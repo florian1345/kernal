@@ -5,8 +5,8 @@
 
 use std::fmt::Debug;
 
-use crate::{AssertThat, Failure};
 use crate::num::{One, Two, Zero};
+use crate::{AssertThat, Failure};
 
 /// A trait that requires the modulo-operation, which is similar to [Rem](std::ops::Rem), but
 /// returns a non-negative result. The equivalence class of a negative number is determined by how
@@ -18,7 +18,6 @@ use crate::num::{One, Two, Zero};
 ///
 /// This trait is implemented on all primitive numeric types.
 pub trait Modulo<Mod = Self> {
-
     /// The type returned by a modulo operation.
     type Output;
 
@@ -36,11 +35,11 @@ macro_rules! impl_modulo_signed {
             fn modulo(self, modulus: $type) -> $type {
                 match self % modulus {
                     rem if rem >= <$type as Zero>::ZERO => rem,
-                    rem => rem + modulus
+                    rem => rem + modulus,
                 }
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_modulo_unsigned {
@@ -52,7 +51,7 @@ macro_rules! impl_modulo_unsigned {
                 self % modulus
             }
         }
-    }
+    };
 }
 
 impl_modulo_signed!(i8);
@@ -85,7 +84,6 @@ impl_modulo_signed!(f64);
 /// assert_that!(15).is_divisible_by(5).is_not_divisible_by(2);
 /// ```
 pub trait RemAssertions<D> {
-
     /// Asserts that the tested value is divisible by the given `divisor` without remainder, i.e.
     /// its [Modulo] equivalence class is zero.
     fn is_divisible_by(self, divisor: D) -> Self;
@@ -99,7 +97,7 @@ impl<T, D> RemAssertions<D> for AssertThat<T>
 where
     D: Clone + Debug,
     T: Clone + Debug + Modulo<D>,
-    T::Output: PartialEq + Zero
+    T::Output: PartialEq + Zero,
 {
     fn is_divisible_by(self, divisor: D) -> Self {
         let mod_class = self.data.clone().modulo(divisor.clone());
@@ -142,7 +140,6 @@ where
 /// assert_that!(0.5).is_not_odd().is_not_even();
 /// ```
 pub trait EvennessAssertions {
-
     /// Asserts that the tested value is even, i.e. its [Modulo] equivalence class with two is equal
     /// to zero.
     fn is_even(self) -> Self;
@@ -165,13 +162,16 @@ pub trait EvennessAssertions {
 impl<T> EvennessAssertions for AssertThat<T>
 where
     T: Clone + Debug + Modulo + Two,
-    T::Output: One + PartialEq + Zero
+    T::Output: One + PartialEq + Zero,
 {
     fn is_even(self) -> Self {
         let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 != T::Output::ZERO {
-            Failure::new(&self).expected_it("to be even").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be even")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -181,7 +181,10 @@ where
         let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 == T::Output::ZERO {
-            Failure::new(&self).expected_it("not to be even").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("not to be even")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -191,7 +194,10 @@ where
         let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 != T::Output::ONE {
-            Failure::new(&self).expected_it("to be odd").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be odd")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -201,7 +207,10 @@ where
         let mod_2 = self.data.clone().modulo(T::TWO);
 
         if mod_2 == T::Output::ONE {
-            Failure::new(&self).expected_it("not to be odd").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("not to be odd")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -210,10 +219,10 @@ where
 
 /// A marker trait for numeric types which may be non-integers. This is implemented by default for
 /// float primitives.
-pub trait MaybeInteger { }
+pub trait MaybeInteger {}
 
-impl MaybeInteger for f32 { }
-impl MaybeInteger for f64 { }
+impl MaybeInteger for f32 {}
+impl MaybeInteger for f64 {}
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument which implements the [MaybeInteger], [Modulo], [Clone], and [One] traits, and whose
@@ -228,7 +237,6 @@ impl MaybeInteger for f64 { }
 /// assert_that!(1.5).is_no_integer();
 /// ```
 pub trait MaybeIntegerAssertions {
-
     /// Asserts that the tested value is an integer, i.e. divisible by one according to [Modulo].
     fn is_an_integer(self) -> Self;
 
@@ -240,13 +248,16 @@ pub trait MaybeIntegerAssertions {
 impl<T> MaybeIntegerAssertions for AssertThat<T>
 where
     T: Clone + Debug + MaybeInteger + Modulo + One,
-    T::Output: PartialEq + Zero
+    T::Output: PartialEq + Zero,
 {
     fn is_an_integer(self) -> Self {
         let mod_1 = self.data.clone().modulo(T::ONE);
 
         if mod_1 != T::Output::ZERO {
-            Failure::new(&self).expected_it("to be an integer").but_it_was_data(&self).fail();
+            Failure::new(&self)
+                .expected_it("to be an integer")
+                .but_it_was_data(&self)
+                .fail();
         }
 
         self
@@ -269,9 +280,8 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_divisible_by_passes_for_multiple() {

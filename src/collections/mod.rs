@@ -4,19 +4,19 @@
 
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, BTreeSet, HashSet, LinkedList, VecDeque};
 use std::collections::binary_heap::Iter as BinaryHeapIter;
 use std::collections::btree_set::Iter as BTreeSetIter;
 use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::linked_list::Iter as LinkedListIter;
 use std::collections::vec_deque::Iter as VecDequeIter;
+use std::collections::{BTreeSet, BinaryHeap, HashSet, LinkedList, VecDeque};
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 use std::slice::Iter as SliceIter;
 
-use crate::{AssertThat, Failure};
 use crate::collections::ordered::OrderedCollection;
 use crate::util::borrow_all;
+use crate::{AssertThat, Failure};
 
 pub mod abs_diff;
 pub mod ord;
@@ -65,7 +65,8 @@ pub trait Collection<'collection> {
 
 impl<'collection, T: 'collection, const LEN: usize> Collection<'collection> for [T; LEN] {
     type Item = T;
-    type Iter<'iter> = SliceIter<'iter, T>
+    type Iter<'iter>
+        = SliceIter<'iter, T>
     where
         'collection: 'iter;
 
@@ -75,7 +76,7 @@ impl<'collection, T: 'collection, const LEN: usize> Collection<'collection> for 
 
     fn iterator<'reference>(&'reference self) -> SliceIter<'reference, T>
     where
-        'collection: 'reference
+        'collection: 'reference,
     {
         self.iter()
     }
@@ -85,7 +86,8 @@ macro_rules! impl_collection {
     ($collection_type:ty, $iterator_type:ident) => {
         impl<'collection, T: 'collection> Collection<'collection> for $collection_type {
             type Item = T;
-            type Iter<'iter> = $iterator_type<'iter, T>
+            type Iter<'iter>
+                = $iterator_type<'iter, T>
             where
                 'collection: 'iter;
 
@@ -95,12 +97,12 @@ macro_rules! impl_collection {
 
             fn iterator<'reference>(&'reference self) -> $iterator_type<'reference, T>
             where
-                'collection: 'reference
+                'collection: 'reference,
             {
                 self.iter()
             }
         }
-    }
+    };
 }
 
 impl_collection!([T], SliceIter);
@@ -113,10 +115,11 @@ impl_collection!(BTreeSet<T>, BTreeSetIter);
 
 impl<'collection, T> Collection<'collection> for &T
 where
-    T: Collection<'collection> + ?Sized
+    T: Collection<'collection> + ?Sized,
 {
     type Item = T::Item;
-    type Iter<'iter> = T::Iter<'iter>
+    type Iter<'iter>
+        = T::Iter<'iter>
     where
         Self: 'iter,
         'collection: 'iter;
@@ -127,7 +130,7 @@ where
 
     fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
     where
-        'collection: 'reference
+        'collection: 'reference,
     {
         (**self).iterator()
     }
@@ -135,10 +138,11 @@ where
 
 impl<'collection, T> Collection<'collection> for &mut T
 where
-    T: Collection<'collection> + ?Sized
+    T: Collection<'collection> + ?Sized,
 {
     type Item = T::Item;
-    type Iter<'iter> = T::Iter<'iter>
+    type Iter<'iter>
+        = T::Iter<'iter>
     where
         Self: 'iter,
         'collection: 'iter;
@@ -149,7 +153,7 @@ where
 
     fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
     where
-        'collection: 'reference
+        'collection: 'reference,
     {
         (**self).iterator()
     }
@@ -157,10 +161,11 @@ where
 
 impl<'collection, T> Collection<'collection> for Box<T>
 where
-    T: Collection<'collection> + ?Sized
+    T: Collection<'collection> + ?Sized,
 {
     type Item = T::Item;
-    type Iter<'iter> = T::Iter<'iter>
+    type Iter<'iter>
+        = T::Iter<'iter>
     where
         Self: 'iter,
         'collection: 'iter;
@@ -171,7 +176,7 @@ where
 
     fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
     where
-        'collection: 'reference
+        'collection: 'reference,
     {
         self.as_ref().iterator()
     }
@@ -192,7 +197,7 @@ pub(crate) struct CollectionDebug<'wrapper, C> {
 impl<'collection, C> Debug for CollectionDebug<'_, C>
 where
     C: Collection<'collection>,
-    C::Item: Debug
+    C::Item: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
@@ -214,18 +219,22 @@ pub(crate) struct HighlightedCollectionDebug<C> {
 }
 
 impl<C> HighlightedCollectionDebug<C> {
-    pub(crate) fn with_single_highlighted_element(collection: C, highlighted_index: usize)
-            -> HighlightedCollectionDebug<C> {
+    pub(crate) fn with_single_highlighted_element(
+        collection: C,
+        highlighted_index: usize,
+    ) -> HighlightedCollectionDebug<C> {
         HighlightedCollectionDebug {
             collection,
-            highlighted_sections: vec![highlighted_index..(highlighted_index + 1)]
+            highlighted_sections: vec![highlighted_index..(highlighted_index + 1)],
         }
     }
 }
 
-fn open_and_close_section_before_item_if_applicable(f: &mut Formatter<'_>,
-        next_highlighted_section: Option<&Range<usize>>, current_index: usize)
-        -> Result<bool, fmt::Error> {
+fn open_and_close_section_before_item_if_applicable(
+    f: &mut Formatter<'_>,
+    next_highlighted_section: Option<&Range<usize>>,
+    current_index: usize,
+) -> Result<bool, fmt::Error> {
     if let Some(next_highlighted_section) = next_highlighted_section {
         if next_highlighted_section.start == current_index {
             write!(f, "[")?;
@@ -240,14 +249,17 @@ fn open_and_close_section_before_item_if_applicable(f: &mut Formatter<'_>,
     Ok(false)
 }
 
-fn close_section_after_item_if_applicable(f: &mut Formatter<'_>,
-        next_highlighted_section: Option<&Range<usize>>, current_index: usize)
-        -> Result<bool, fmt::Error> {
+fn close_section_after_item_if_applicable(
+    f: &mut Formatter<'_>,
+    next_highlighted_section: Option<&Range<usize>>,
+    current_index: usize,
+) -> Result<bool, fmt::Error> {
     if let Some(next_highlighted_section) = next_highlighted_section {
         let next_index = current_index + 1;
 
-        if next_index == next_highlighted_section.end &&
-                next_index != next_highlighted_section.start {
+        if next_index == next_highlighted_section.end
+            && next_index != next_highlighted_section.start
+        {
             write!(f, "]")?;
             return Ok(true);
         }
@@ -259,7 +271,7 @@ fn close_section_after_item_if_applicable(f: &mut Formatter<'_>,
 impl<'collection, C> Debug for HighlightedCollectionDebug<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug
+    C::Item: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut highlighted_sections_iter = self.highlighted_sections.iter();
@@ -272,10 +284,13 @@ where
 
             write_delimiter(f, index)?;
             let mut section_closed = open_and_close_section_before_item_if_applicable(
-                f, next_highlighted_section, index)?;
+                f,
+                next_highlighted_section,
+                index,
+            )?;
             write!(f, "{:?}", item)?;
-            section_closed |= close_section_after_item_if_applicable(
-                f, next_highlighted_section, index)?;
+            section_closed |=
+                close_section_after_item_if_applicable(f, next_highlighted_section, index)?;
 
             if section_closed {
                 next_highlighted_section = highlighted_sections_iter.next();
@@ -312,7 +327,7 @@ where
 /// ```
 pub trait CollectionAssertions<'collection, C>
 where
-    C: Collection<'collection>
+    C: Collection<'collection>,
 {
     /// Asserts that the tested collection is empty, i.e. contains no elements.
     fn is_empty(self) -> Self;
@@ -358,45 +373,62 @@ where
     fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self;
 }
 
-fn assert_length_predicate<'collection, C, F>(assert_that: AssertThat<C>, length_predicate: F,
-    reference_len: usize, expected_it_prefix: &str) -> AssertThat<C>
+fn assert_length_predicate<'collection, C, F>(
+    assert_that: AssertThat<C>,
+    length_predicate: F,
+    reference_len: usize,
+    expected_it_prefix: &str,
+) -> AssertThat<C>
 where
     C: Collection<'collection>,
     C::Item: Debug,
-    F: Fn(usize) -> bool
+    F: Fn(usize) -> bool,
 {
     let len = assert_that.data.len();
 
     if !length_predicate(len) {
         let collection_debug = CollectionDebug {
-            collection: &assert_that.data
+            collection: &assert_that.data,
         };
 
         Failure::new(&assert_that)
             .expected_it(format!("{} <{}>", expected_it_prefix, reference_len))
-            .but_it(format!("was <{:?}> with length <{}>", collection_debug, len))
+            .but_it(format!(
+                "was <{:?}> with length <{}>",
+                collection_debug, len
+            ))
             .fail();
     }
 
     assert_that
 }
 
-fn assert_all_match_predicate<'collection, C, F>(assert_that: AssertThat<C>, mut item_predicate: F,
-    expected_it: &str) -> AssertThat<C>
+fn assert_all_match_predicate<'collection, C, F>(
+    assert_that: AssertThat<C>,
+    mut item_predicate: F,
+    expected_it: &str,
+) -> AssertThat<C>
 where
     C: Collection<'collection>,
     C::Item: Debug,
-    F: FnMut(&C::Item) -> bool
+    F: FnMut(&C::Item) -> bool,
 {
-    let counter_example_with_index = assert_that.data.iterator().enumerate()
+    let counter_example_with_index = assert_that
+        .data
+        .iterator()
+        .enumerate()
         .find(|(_, item)| !item_predicate(item));
 
     if let Some((counter_example_index, _)) = counter_example_with_index {
         Failure::new(&assert_that)
             .expected_it(expected_it)
-            .but_it(format!("was <{:?}>",
+            .but_it(format!(
+                "was <{:?}>",
                 HighlightedCollectionDebug::with_single_highlighted_element(
-                    &assert_that.data, counter_example_index)))
+                    &assert_that.data,
+                    counter_example_index
+                )
+            ))
             .fail();
     }
 
@@ -407,14 +439,18 @@ where
 /// the item at position X in `items` (`expected`) satisfy `comparator(expected, actual)`. If a
 /// violation is found, a failure is produced with an `expected_it` of `"to contain exactly in the
 /// given order {items}"` suffixed with the given `expected_it_suffix`.
-fn assert_contains_exactly_in_given_order_by<'collection, C, E, I, F>(assert_that: AssertThat<C>,
-    items: I, comparator: F, expected_it_suffix: &str) -> AssertThat<C>
+fn assert_contains_exactly_in_given_order_by<'collection, C, E, I, F>(
+    assert_that: AssertThat<C>,
+    items: I,
+    comparator: F,
+    expected_it_suffix: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: Debug,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
-    F: Fn(&C::Item, &C::Item) -> bool
+    F: Fn(&C::Item, &C::Item) -> bool,
 {
     let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
     let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
@@ -423,24 +459,30 @@ where
     let counter_example_section = match collection_len.cmp(&expected_items.len()) {
         Ordering::Less => Some(collection_len..collection_len),
         Ordering::Greater => Some(expected_items.len()..collection_len),
-        Ordering::Equal => expected_items.iter()
+        Ordering::Equal => expected_items
+            .iter()
             .zip(assert_that.data.iterator())
             .enumerate()
-            .find(|(_, (expected_item, collection_item))|
-                !comparator(expected_item, collection_item))
-            .map(|(index, _)| index..(index + 1))
+            .find(|(_, (expected_item, collection_item))| {
+                !comparator(expected_item, collection_item)
+            })
+            .map(|(index, _)| index..(index + 1)),
     };
 
     if let Some(counter_example_section) = counter_example_section {
-        let expected_items_debug = CollectionDebug { collection: &expected_items };
+        let expected_items_debug = CollectionDebug {
+            collection: &expected_items,
+        };
         let collection_debug = HighlightedCollectionDebug {
             collection: &assert_that.data,
-            highlighted_sections: vec![counter_example_section]
+            highlighted_sections: vec![counter_example_section],
         };
 
         Failure::new(&assert_that)
-            .expected_it(format!("to contain exactly in the given order <{:?}>{}",
-                expected_items_debug, expected_it_suffix))
+            .expected_it(format!(
+                "to contain exactly in the given order <{:?}>{}",
+                expected_items_debug, expected_it_suffix
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -451,13 +493,18 @@ where
 impl<'collection, C> CollectionAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug
+    C::Item: Debug,
 {
     fn is_empty(self) -> Self {
         if !self.data.is_empty() {
             Failure::new(&self)
                 .expected_it("to be empty")
-                .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
+                .but_it(format!(
+                    "was <{:?}>",
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail();
         }
 
@@ -466,47 +513,79 @@ where
 
     fn is_not_empty(self) -> Self {
         if self.data.is_empty() {
-            Failure::new(&self).expected_it("not to be empty").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be empty")
+                .but_it("was")
+                .fail();
         }
 
         self
     }
 
     fn has_length(self, expected_length: usize) -> Self {
-        assert_length_predicate(self, |len| len == expected_length,
-            expected_length, "to have length")
+        assert_length_predicate(
+            self,
+            |len| len == expected_length,
+            expected_length,
+            "to have length",
+        )
     }
 
     fn has_length_less_than(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len| len < length_bound,
-            length_bound, "to have length less than")
+        assert_length_predicate(
+            self,
+            |len| len < length_bound,
+            length_bound,
+            "to have length less than",
+        )
     }
 
     fn has_length_less_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len| len <= length_bound,
-            length_bound, "to have length less than or equal to")
+        assert_length_predicate(
+            self,
+            |len| len <= length_bound,
+            length_bound,
+            "to have length less than or equal to",
+        )
     }
 
     fn has_length_greater_than(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len| len > length_bound,
-            length_bound, "to have length greater than")
+        assert_length_predicate(
+            self,
+            |len| len > length_bound,
+            length_bound,
+            "to have length greater than",
+        )
     }
 
     fn has_length_greater_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_length_predicate(self, |len| len >= length_bound,
-            length_bound, "to have length greater than or equal to")
+        assert_length_predicate(
+            self,
+            |len| len >= length_bound,
+            length_bound,
+            "to have length greater than or equal to",
+        )
     }
 
     fn does_not_have_length(self, unexpected_length: usize) -> Self {
-        assert_length_predicate(self, |len| len != unexpected_length,
-            unexpected_length, "not to have length")
+        assert_length_predicate(
+            self,
+            |len| len != unexpected_length,
+            unexpected_length,
+            "not to have length",
+        )
     }
 
     fn contains_elements_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self {
         if !self.data.iterator().any(predicate) {
             Failure::new(&self)
                 .expected_it("to contain elements matching predicate")
-                .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
+                .but_it(format!(
+                    "was <{:?}>",
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail();
         }
 
@@ -514,20 +593,33 @@ where
     }
 
     fn contains_only_elements_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self {
-        assert_all_match_predicate(self, predicate, "to contain only elements matching predicate")
+        assert_all_match_predicate(
+            self,
+            predicate,
+            "to contain only elements matching predicate",
+        )
     }
 
-    fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(self, mut predicate: F) -> Self {
-        assert_all_match_predicate(self, |item| !predicate(item),
-            "not to contain elements matching predicate")
+    fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(
+        self,
+        mut predicate: F,
+    ) -> Self {
+        assert_all_match_predicate(
+            self,
+            |item| !predicate(item),
+            "not to contain elements matching predicate",
+        )
     }
 }
 
-fn find_contiguous_subsequence_by<'collection, C, F>(collection: &C, subsequence: &[&C::Item],
-    mut matches: F) -> Option<Vec<Range<usize>>>
+fn find_contiguous_subsequence_by<'collection, C, F>(
+    collection: &C,
+    subsequence: &[&C::Item],
+    mut matches: F,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     let collection_vec = collection.iterator().collect::<Vec<_>>();
 
@@ -539,7 +631,11 @@ where
         let range = start..(start + subsequence.len());
         let slice = &collection_vec[range.clone()];
 
-        if slice.iter().zip(subsequence.iter()).all(|(item_1, item_2)| matches(item_1, item_2)) {
+        if slice
+            .iter()
+            .zip(subsequence.iter())
+            .all(|(item_1, item_2)| matches(item_1, item_2))
+        {
             return Some(vec![range]);
         }
     }
@@ -547,11 +643,14 @@ where
     None
 }
 
-fn find_subsequence_by<'collection, C, F>(collection: &C, subsequence: &[&C::Item], mut matches: F)
-    -> Option<Vec<Range<usize>>>
+fn find_subsequence_by<'collection, C, F>(
+    collection: &C,
+    subsequence: &[&C::Item],
+    mut matches: F,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if subsequence.is_empty() {
         return Some(vec![0..0]);
@@ -589,17 +688,21 @@ where
     }
 }
 
-fn find_prefix_by<'collection, C, F>(collection: &C, prefix: &[&C::Item], mut matches: F)
-    -> Option<Vec<Range<usize>>>
+fn find_prefix_by<'collection, C, F>(
+    collection: &C,
+    prefix: &[&C::Item],
+    mut matches: F,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if collection.len() < prefix.len() {
         return None;
     }
 
-    let has_prefix = collection.iterator()
+    let has_prefix = collection
+        .iterator()
         .zip(prefix.iter())
         .all(|(item_1, item_2)| matches(item_1, item_2));
 
@@ -611,18 +714,23 @@ where
     }
 }
 
-fn find_suffix_by<'collection, C, F>(collection: &C, suffix: &[&C::Item], mut matches: F)
-    -> Option<Vec<Range<usize>>>
+fn find_suffix_by<'collection, C, F>(
+    collection: &C,
+    suffix: &[&C::Item],
+    mut matches: F,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    F: FnMut(&C::Item, &C::Item) -> bool
+    F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if collection.len() < suffix.len() {
         return None;
     }
 
     let collection_suffix_start = collection.len() - suffix.len();
-    let has_suffix = collection.iterator().skip(collection_suffix_start)
+    let has_suffix = collection
+        .iterator()
+        .skip(collection_suffix_start)
         .zip(suffix.iter())
         .all(|(item_1, item_2)| matches(item_1, item_2));
 
@@ -637,22 +745,23 @@ where
 #[cfg(test)]
 mod tests {
     use std::slice::Iter;
-    use super::*;
 
+    use super::*;
     use crate::{assert_fails, assert_that};
 
     struct MockCollection(Vec<u32>);
 
     impl<'collection> Collection<'collection> for MockCollection {
         type Item = u32;
-        type Iter<'iter> = Iter<'iter, u32>
+        type Iter<'iter>
+            = Iter<'iter, u32>
         where
             Self: 'iter,
             'collection: 'iter;
 
         fn iterator<'reference>(&'reference self) -> Iter<'reference, u32>
         where
-            'collection: 'reference
+            'collection: 'reference,
         {
             self.0.iter()
         }
@@ -672,7 +781,7 @@ mod tests {
     fn highlighted_collection_debug_prints_collection_without_highlighted_sections() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![]
+            highlighted_sections: vec![],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -683,7 +792,7 @@ mod tests {
     fn highlighted_collection_debug_works_with_singleton_section() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![1..2]
+            highlighted_sections: vec![1..2],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -694,7 +803,7 @@ mod tests {
     fn highlighted_collection_debug_works_with_empty_section() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![1..1]
+            highlighted_sections: vec![1..1],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -705,7 +814,7 @@ mod tests {
     fn highlighted_collection_debug_works_with_separated_sections() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3, 4, 5],
-            highlighted_sections: vec![0..1, 2..4]
+            highlighted_sections: vec![0..1, 2..4],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -716,7 +825,7 @@ mod tests {
     fn highlighted_collection_debug_works_with_consecutive_sections() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![0..1, 1..2]
+            highlighted_sections: vec![0..1, 1..2],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -727,7 +836,7 @@ mod tests {
     fn highlighted_collection_debug_works_with_consecutive_empty_sections() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![0..0, 1..1]
+            highlighted_sections: vec![0..0, 1..1],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 
@@ -738,7 +847,7 @@ mod tests {
     fn highlighted_collection_debug_correctly_renders_empty_section_in_end() {
         let highlighted_collection_debug = HighlightedCollectionDebug {
             collection: &[1, 2, 3],
-            highlighted_sections: vec![3..3]
+            highlighted_sections: vec![3..3],
         };
         let formatted = format!("{:?}", highlighted_collection_debug);
 

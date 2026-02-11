@@ -4,9 +4,9 @@
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-use crate::{AssertThat, Failure};
 use crate::collections::{CollectionDebug, HighlightedCollectionDebug};
 use crate::util::borrow_all;
+use crate::{AssertThat, Failure};
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [PartialEq] trait.
@@ -19,7 +19,6 @@ use crate::util::borrow_all;
 /// assert_that!(1 + 1).is_equal_to(2).is_equal_to_none([1, 3]);
 /// ```
 pub trait PartialEqAssertions<T> {
-
     /// Asserts that the tested value is equal to the given `expected` value according to the
     /// [PartialEq] trait.
     fn is_equal_to<E: Borrow<T>>(self, expected: E) -> Self;
@@ -68,12 +67,12 @@ impl<T: Debug + PartialEq> PartialEqAssertions<T> for AssertThat<T> {
         let expected_vec_unborrowed = expected_iter.into_iter().collect::<Vec<_>>();
         let expected_vec: Vec<&T> = borrow_all(&expected_vec_unborrowed);
 
-        if expected_vec.iter().any(|&expected| &self.data == expected) {
+        if expected_vec.contains(&&self.data) {
             return self;
         }
 
         let collection_debug = CollectionDebug {
-            collection: &expected_vec
+            collection: &expected_vec,
         };
 
         Failure::new(&self)
@@ -86,14 +85,16 @@ impl<T: Debug + PartialEq> PartialEqAssertions<T> for AssertThat<T> {
         let unexpected_vec_unborrowed = unexpected_iter.into_iter().collect::<Vec<_>>();
         let unexpected_vec: Vec<&T> = borrow_all(&unexpected_vec_unborrowed);
 
-        let counter_example_index = unexpected_vec.iter().enumerate()
+        let counter_example_index = unexpected_vec
+            .iter()
+            .enumerate()
             .find(|(_, &unexpected)| &self.data == unexpected)
             .map(|(index, _)| index);
 
         if let Some(counter_example_index) = counter_example_index {
             let collection_debug = HighlightedCollectionDebug {
                 collection: &unexpected_vec,
-                highlighted_sections: vec![counter_example_index..(counter_example_index + 1)]
+                highlighted_sections: vec![counter_example_index..(counter_example_index + 1)],
             };
 
             Failure::new(&self)
@@ -109,12 +110,11 @@ impl<T: Debug + PartialEq> PartialEqAssertions<T> for AssertThat<T> {
 #[cfg(test)]
 mod tests {
 
+    use super::*;
     use crate::{assert_fails, assert_that};
 
-    use super::*;
-
     struct U32Wrapper {
-        data: u32
+        data: u32,
     }
 
     impl Borrow<u32> for U32Wrapper {
@@ -127,7 +127,7 @@ mod tests {
     fn is_equal_to_passes_for_equal_integers() {
         assert_that!(1 + 2).is_equal_to(3);
     }
-    
+
     #[test]
     fn is_equal_to_passes_for_u32_with_equivalent_u32_wrapper() {
         assert_that!(42).is_equal_to(U32Wrapper { data: 42 });

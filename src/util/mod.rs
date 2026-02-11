@@ -11,12 +11,15 @@ pub(crate) fn borrow_all<T, B: Borrow<T>>(to_borrow: &[B]) -> Vec<&T> {
 pub(crate) fn borrow_all_pairs<L, R, LB, RB>(to_borrow: &[(LB, RB)]) -> Vec<(&L, &R)>
 where
     LB: Borrow<L>,
-    RB: Borrow<R>
+    RB: Borrow<R>,
 {
-    to_borrow.iter().map(|(l, r)| (l.borrow(), r.borrow())).collect()
+    to_borrow
+        .iter()
+        .map(|(l, r)| (l.borrow(), r.borrow()))
+        .collect()
 }
 
-pub(crate) trait Set<T> : FromIterator<T> {
+pub(crate) trait Set<T>: FromIterator<T> {
     fn contains(&self, item: &T) -> bool;
 }
 

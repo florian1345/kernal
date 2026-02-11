@@ -16,7 +16,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!('o').is_contained_in("hello").is_not_prefix_of("world");
 /// ```
 pub trait CharacterAssertions {
-
     /// Asserts that the tested character is a whitespace character, i.e. that
     /// [char::is_whitespace] is `true`.
     fn is_whitespace(self) -> Self;
@@ -108,11 +107,14 @@ pub trait CharacterAssertions {
     fn is_not_equal_to_ignoring_case(self, unexpected: char) -> Self;
 }
 
-fn assert_char_matches_predicate<P, S>(assert_that: AssertThat<char>, predicate: P, expected_it: S)
-    -> AssertThat<char>
+fn assert_char_matches_predicate<P, S>(
+    assert_that: AssertThat<char>,
+    predicate: P,
+    expected_it: S,
+) -> AssertThat<char>
 where
     P: Fn(char) -> bool,
-    S: Into<String>
+    S: Into<String>,
 {
     if !predicate(assert_that.data) {
         Failure::new(&assert_that)
@@ -125,156 +127,214 @@ where
 }
 
 impl CharacterAssertions for AssertThat<char> {
-
     fn is_whitespace(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_whitespace(),
-            "to be a whitespace character")
+            "to be a whitespace character",
+        )
     }
 
     fn is_not_whitespace(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_whitespace(),
-            "not to be a whitespace character")
+            "not to be a whitespace character",
+        )
     }
 
     fn is_alphabetic(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_alphabetic(),
-            "to be an alphabetic character")
+            "to be an alphabetic character",
+        )
     }
 
     fn is_not_alphabetic(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_alphabetic(),
-            "not to be an alphabetic character")
+            "not to be an alphabetic character",
+        )
     }
 
     fn is_numeric(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_numeric(),
-            "to be a numeric character")
+            "to be a numeric character",
+        )
     }
 
     fn is_not_numeric(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_numeric(),
-            "not to be a numeric character")
+            "not to be a numeric character",
+        )
     }
 
     fn is_alphanumeric(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_alphanumeric(),
-            "to be an alphanumeric character")
+            "to be an alphanumeric character",
+        )
     }
 
     fn is_not_alphanumeric(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_alphanumeric(),
-            "not to be an alphanumeric character")
+            "not to be an alphanumeric character",
+        )
     }
 
     fn is_uppercase(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_uppercase(),
-            "to be an uppercase character")
+            "to be an uppercase character",
+        )
     }
 
     fn is_not_uppercase(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_uppercase(),
-            "not to be an uppercase character")
+            "not to be an uppercase character",
+        )
     }
 
     fn is_lowercase(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_lowercase(),
-            "to be a lowercase character")
+            "to be a lowercase character",
+        )
     }
 
     fn is_not_lowercase(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_lowercase(),
-            "not to be a lowercase character")
+            "not to be a lowercase character",
+        )
     }
 
     fn is_control(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| character.is_control(),
-            "to be a control character")
+            "to be a control character",
+        )
     }
 
     fn is_not_control(self) -> Self {
-        assert_char_matches_predicate(self,
+        assert_char_matches_predicate(
+            self,
             |character| !character.is_control(),
-            "not to be a control character")
+            "not to be a control character",
+        )
     }
 
     fn is_contained_in<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().any(|string_character| character == string_character),
-            format!("to be contained in <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| {
+                string
+                    .chars()
+                    .any(|string_character| character == string_character)
+            },
+            format!("to be contained in <{}>", string.escape_debug()),
+        )
     }
 
     fn is_not_contained_in<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self,
-            |character| string.chars().all(|string_character| character != string_character),
-            format!("not to be contained in <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| {
+                string
+                    .chars()
+                    .all(|string_character| character != string_character)
+            },
+            format!("not to be contained in <{}>", string.escape_debug()),
+        )
     }
 
     fn is_prefix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self, |character| string.starts_with(character),
-            format!("to be the first character of <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| string.starts_with(character),
+            format!("to be the first character of <{}>", string.escape_debug()),
+        )
     }
 
     fn is_not_prefix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self, |character| !string.starts_with(character),
-            format!("not to be the first character of <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| !string.starts_with(character),
+            format!(
+                "not to be the first character of <{}>",
+                string.escape_debug()
+            ),
+        )
     }
 
     fn is_suffix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self, |character| string.ends_with(character),
-            format!("to be the last character of <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| string.ends_with(character),
+            format!("to be the last character of <{}>", string.escape_debug()),
+        )
     }
 
     fn is_not_suffix_of<S: Borrow<str>>(self, string: S) -> Self {
         let string = string.borrow();
 
-        assert_char_matches_predicate(self, |character| !string.ends_with(character),
-            format!("not to be the last character of <{}>", string.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| !string.ends_with(character),
+            format!(
+                "not to be the last character of <{}>",
+                string.escape_debug()
+            ),
+        )
     }
 
     fn is_equal_to_ignoring_case(self, expected: char) -> Self {
-        assert_char_matches_predicate(self,
-            |character|
-                character.to_lowercase().to_string() == expected.to_lowercase().to_string(),
-            format!("to equal <{}> ignoring case", expected.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| character.to_lowercase().to_string() == expected.to_lowercase().to_string(),
+            format!("to equal <{}> ignoring case", expected.escape_debug()),
+        )
     }
 
     fn is_not_equal_to_ignoring_case(self, expected: char) -> Self {
-        assert_char_matches_predicate(self,
-            |character|
-                character.to_lowercase().to_string() != expected.to_lowercase().to_string(),
-            format!("not to equal <{}> ignoring case", expected.escape_debug()))
+        assert_char_matches_predicate(
+            self,
+            |character| character.to_lowercase().to_string() != expected.to_lowercase().to_string(),
+            format!("not to equal <{}> ignoring case", expected.escape_debug()),
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn is_whitespace_passes_for_space() {

@@ -24,7 +24,6 @@ use crate::{AssertThat, Failure};
 ///     .is_trimmed();
 /// ```
 pub trait StringAssertions {
-
     /// Asserts that the tested string is empty, i.e. contains no characters.
     fn is_empty(self) -> Self;
 
@@ -159,11 +158,17 @@ pub trait StringAssertions {
     fn to_bytes(self) -> AssertThat<Vec<u8>>;
 }
 
-fn assert_length_matches<T, P>(assert_that: AssertThat<T>, length: usize, length_predicate: P,
-    length_kind: &str, comparison_kind: &str, reference_length: usize) -> AssertThat<T>
+fn assert_length_matches<T, P>(
+    assert_that: AssertThat<T>,
+    length: usize,
+    length_predicate: P,
+    length_kind: &str,
+    comparison_kind: &str,
+    reference_length: usize,
+) -> AssertThat<T>
 where
     T: AsRef<str>,
-    P: Fn(usize) -> bool
+    P: Fn(usize) -> bool,
 {
     if !length_predicate(length) {
         let description = if comparison_kind.is_empty() {
@@ -182,35 +187,58 @@ where
     assert_that
 }
 
-fn assert_char_length_matches<T, P>(assert_that: AssertThat<T>, length_predicate: P,
-    comparison_kind: &str, reference_length: usize) -> AssertThat<T>
+fn assert_char_length_matches<T, P>(
+    assert_that: AssertThat<T>,
+    length_predicate: P,
+    comparison_kind: &str,
+    reference_length: usize,
+) -> AssertThat<T>
 where
     T: AsRef<str>,
-    P: Fn(usize) -> bool
+    P: Fn(usize) -> bool,
 {
     let length = assert_that.data.as_ref().chars().count();
 
     assert_length_matches(
-        assert_that, length, length_predicate, "char length", comparison_kind, reference_length)
+        assert_that,
+        length,
+        length_predicate,
+        "char length",
+        comparison_kind,
+        reference_length,
+    )
 }
 
-fn assert_byte_length_matches<T, P>(assert_that: AssertThat<T>, length_predicate: P,
-    comparison_kind: &str, reference_length: usize) -> AssertThat<T>
+fn assert_byte_length_matches<T, P>(
+    assert_that: AssertThat<T>,
+    length_predicate: P,
+    comparison_kind: &str,
+    reference_length: usize,
+) -> AssertThat<T>
 where
     T: AsRef<str>,
-    P: Fn(usize) -> bool
+    P: Fn(usize) -> bool,
 {
     let length = assert_that.data.as_ref().len();
 
     assert_length_matches(
-        assert_that, length, length_predicate, "byte length", comparison_kind, reference_length)
+        assert_that,
+        length,
+        length_predicate,
+        "byte length",
+        comparison_kind,
+        reference_length,
+    )
 }
 
-fn assert_contains_characters_matching<T, P>(assert_that: AssertThat<T>,
-    char_predicate: P, expected_it: &str) -> AssertThat<T>
+fn assert_contains_characters_matching<T, P>(
+    assert_that: AssertThat<T>,
+    char_predicate: P,
+    expected_it: &str,
+) -> AssertThat<T>
 where
     T: AsRef<str>,
-    P: Fn(char) -> bool
+    P: Fn(char) -> bool,
 {
     let string = assert_that.data.as_ref();
 
@@ -232,17 +260,22 @@ fn highlight_char(input: &str, byte_index: usize) -> String {
     let first_byte = input.as_bytes()[byte_index];
     let char_size = first_byte.leading_ones().saturating_sub(1) as usize + 1;
 
-    format!("{}[{}]{}",
+    format!(
+        "{}[{}]{}",
         input[..byte_index].escape_debug(),
         input[byte_index..(byte_index + char_size)].escape_debug(),
-        input[(byte_index + char_size)..].escape_debug())
+        input[(byte_index + char_size)..].escape_debug()
+    )
 }
 
-fn assert_does_not_contain_characters_matching<T, P>(assert_that: AssertThat<T>,
-    char_predicate: P, expected_it: &str) -> AssertThat<T>
+fn assert_does_not_contain_characters_matching<T, P>(
+    assert_that: AssertThat<T>,
+    char_predicate: P,
+    expected_it: &str,
+) -> AssertThat<T>
 where
     T: AsRef<str>,
-    P: Fn(char) -> bool
+    P: Fn(char) -> bool,
 {
     let string = assert_that.data.as_ref();
 
@@ -257,7 +290,6 @@ where
 }
 
 impl<T: AsRef<str>> StringAssertions for AssertThat<T> {
-
     fn is_empty(self) -> Self {
         let data = self.data.as_ref();
 
@@ -275,74 +307,121 @@ impl<T: AsRef<str>> StringAssertions for AssertThat<T> {
         let data = self.data.as_ref();
 
         if data.is_empty() {
-            Failure::new(&self).expected_it("not to be empty").but_it("was").fail();
+            Failure::new(&self)
+                .expected_it("not to be empty")
+                .but_it("was")
+                .fail();
         }
 
         self
     }
 
     fn has_char_length(self, expected_length: usize) -> Self {
-        assert_char_length_matches(self, |length| length == expected_length, "", expected_length)
+        assert_char_length_matches(
+            self,
+            |length| length == expected_length,
+            "",
+            expected_length,
+        )
     }
 
     fn has_char_length_less_than(self, length_bound: usize) -> Self {
-        assert_char_length_matches(self, |length| length < length_bound, "less than", length_bound)
+        assert_char_length_matches(
+            self,
+            |length| length < length_bound,
+            "less than",
+            length_bound,
+        )
     }
 
     fn has_char_length_less_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_char_length_matches(self,
+        assert_char_length_matches(
+            self,
             |length| length <= length_bound,
-            "less than or equal to", length_bound)
+            "less than or equal to",
+            length_bound,
+        )
     }
 
     fn has_char_length_greater_than(self, length_bound: usize) -> Self {
-        assert_char_length_matches(self,
+        assert_char_length_matches(
+            self,
             |length| length > length_bound,
-            "greater than", length_bound)
+            "greater than",
+            length_bound,
+        )
     }
 
     fn has_char_length_greater_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_char_length_matches(self,
+        assert_char_length_matches(
+            self,
             |length| length >= length_bound,
-            "greater than or equal to", length_bound)
+            "greater than or equal to",
+            length_bound,
+        )
     }
 
     fn has_char_length_different_to(self, unexpected_length: usize) -> Self {
-        assert_char_length_matches(self,
+        assert_char_length_matches(
+            self,
             |length| length != unexpected_length,
-            "different to", unexpected_length)
+            "different to",
+            unexpected_length,
+        )
     }
 
     fn has_byte_length(self, expected_length: usize) -> Self {
-        assert_byte_length_matches(self, |length| length == expected_length, "", expected_length)
+        assert_byte_length_matches(
+            self,
+            |length| length == expected_length,
+            "",
+            expected_length,
+        )
     }
 
     fn has_byte_length_less_than(self, length_bound: usize) -> Self {
-        assert_byte_length_matches(self, |length| length < length_bound, "less than", length_bound)
+        assert_byte_length_matches(
+            self,
+            |length| length < length_bound,
+            "less than",
+            length_bound,
+        )
     }
 
     fn has_byte_length_less_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_byte_length_matches(self,
+        assert_byte_length_matches(
+            self,
             |length| length <= length_bound,
-            "less than or equal to", length_bound)
+            "less than or equal to",
+            length_bound,
+        )
     }
 
     fn has_byte_length_greater_than(self, length_bound: usize) -> Self {
-        assert_byte_length_matches(self,
+        assert_byte_length_matches(
+            self,
             |length| length > length_bound,
-            "greater than", length_bound)
+            "greater than",
+            length_bound,
+        )
     }
 
     fn has_byte_length_greater_than_or_equal_to(self, length_bound: usize) -> Self {
-        assert_byte_length_matches(self,
+        assert_byte_length_matches(
+            self,
             |length| length >= length_bound,
-            "greater than or equal to", length_bound)
+            "greater than or equal to",
+            length_bound,
+        )
     }
 
     fn has_byte_length_different_to(self, unexpected_length: usize) -> Self {
-        assert_byte_length_matches(self,
+        assert_byte_length_matches(
+            self,
             |length| length != unexpected_length,
-            "different to", unexpected_length)
+            "different to",
+            unexpected_length,
+        )
     }
 
     fn contains_whitespace(self) -> Self {
@@ -350,78 +429,115 @@ impl<T: AsRef<str>> StringAssertions for AssertThat<T> {
     }
 
     fn does_not_contain_whitespace(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_whitespace, "not to contain whitespace")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_whitespace,
+            "not to contain whitespace",
+        )
     }
 
     fn contains_alphabetic_characters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_alphabetic, "to contain alphabetic characters")
+        assert_contains_characters_matching(
+            self,
+            char::is_alphabetic,
+            "to contain alphabetic characters",
+        )
     }
 
     fn does_not_contain_alphabetic_characters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_alphabetic, "not to contain alphabetic characters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_alphabetic,
+            "not to contain alphabetic characters",
+        )
     }
 
     fn contains_numeric_characters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_numeric, "to contain numeric characters")
+        assert_contains_characters_matching(self, char::is_numeric, "to contain numeric characters")
     }
 
     fn does_not_contain_numeric_characters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_numeric, "not to contain numeric characters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_numeric,
+            "not to contain numeric characters",
+        )
     }
 
     fn contains_alphanumeric_characters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_alphanumeric, "to contain alphanumeric characters")
+        assert_contains_characters_matching(
+            self,
+            char::is_alphanumeric,
+            "to contain alphanumeric characters",
+        )
     }
 
     fn does_not_contain_alphanumeric_characters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_alphanumeric, "not to contain alphanumeric characters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_alphanumeric,
+            "not to contain alphanumeric characters",
+        )
     }
 
     fn contains_uppercase_letters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_uppercase, "to contain uppercase letters")
+        assert_contains_characters_matching(
+            self,
+            char::is_uppercase,
+            "to contain uppercase letters",
+        )
     }
 
     fn does_not_contain_uppercase_letters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_uppercase, "not to contain uppercase letters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_uppercase,
+            "not to contain uppercase letters",
+        )
     }
 
     fn contains_lowercase_letters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_lowercase, "to contain lowercase letters")
+        assert_contains_characters_matching(
+            self,
+            char::is_lowercase,
+            "to contain lowercase letters",
+        )
     }
 
     fn does_not_contain_lowercase_letters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_lowercase, "not to contain lowercase letters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_lowercase,
+            "not to contain lowercase letters",
+        )
     }
 
     fn contains_control_characters(self) -> Self {
-        assert_contains_characters_matching(self,
-            char::is_control, "to contain control characters")
+        assert_contains_characters_matching(self, char::is_control, "to contain control characters")
     }
 
     fn does_not_contain_control_characters(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            char::is_control, "not to contain control characters")
+        assert_does_not_contain_characters_matching(
+            self,
+            char::is_control,
+            "not to contain control characters",
+        )
     }
 
     fn is_trimmed(self) -> Self {
         let string = self.data.as_ref();
-        let counter_example = string.chars().next()
+        let counter_example = string
+            .chars()
+            .next()
             .filter(|&character| character.is_whitespace())
             .map(|_| 0)
-            .or_else(|| string.char_indices().last()
-                .filter(|(_, character)| character.is_whitespace())
-                .map(|(index, _)| index));
+            .or_else(|| {
+                string
+                    .char_indices()
+                    .last()
+                    .filter(|(_, character)| character.is_whitespace())
+                    .map(|(index, _)| index)
+            });
 
         if let Some(byte_index) = counter_example {
             Failure::new(&self)
@@ -447,8 +563,11 @@ impl<T: AsRef<str>> StringAssertions for AssertThat<T> {
     }
 
     fn is_ascii(self) -> Self {
-        assert_does_not_contain_characters_matching(self,
-            |c| !c.is_ascii(), "to be an ASCII string")
+        assert_does_not_contain_characters_matching(
+            self,
+            |c| !c.is_ascii(),
+            "to be an ASCII string",
+        )
     }
 
     fn is_not_ascii(self) -> Self {
@@ -474,7 +593,6 @@ impl<T: AsRef<str>> StringAssertions for AssertThat<T> {
 mod tests {
 
     use super::*;
-
     use crate::{assert_fails, assert_that};
 
     #[test]

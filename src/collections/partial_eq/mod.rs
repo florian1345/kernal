@@ -6,24 +6,22 @@ use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::ops::Range;
 
-use crate::{AssertThat, Failure};
+use crate::collections::ordered::OrderedCollection;
 use crate::collections::{
-    assert_all_match_predicate,
-    assert_contains_exactly_in_given_order_by,
     Collection,
     CollectionDebug,
-    HighlightedCollectionDebug
-};
-use crate::util::multiset::vec::VecMultiset;
-use crate::collections::{
+    HighlightedCollectionDebug,
+    assert_all_match_predicate,
+    assert_contains_exactly_in_given_order_by,
     find_contiguous_subsequence_by,
     find_prefix_by,
     find_subsequence_by,
-    find_suffix_by
+    find_suffix_by,
 };
-use crate::collections::ordered::OrderedCollection;
-use crate::util::{borrow_all, Set};
 use crate::util::multiset::Multiset;
+use crate::util::multiset::vec::VecMultiset;
+use crate::util::{Set, borrow_all};
+use crate::{AssertThat, Failure};
 
 pub mod btree;
 pub mod hash;
@@ -42,7 +40,7 @@ pub mod hash;
 /// ```
 pub trait CollectionPartialEqAssertions<'collection, C>
 where
-    C: Collection<'collection>
+    C: Collection<'collection>,
 {
     /// Asserts that the tested collection contains at least one element which is equal to the given
     /// `item` according to [PartialEq].
@@ -88,12 +86,14 @@ where
         I: IntoIterator<Item = E>;
 }
 
-pub(crate) fn compute_missing_and_superfluous<'item, T, M, I>(actual_items: I,
-    expected_items: &'item [&T]) -> (M, M)
+pub(crate) fn compute_missing_and_superfluous<'item, T, M, I>(
+    actual_items: I,
+    expected_items: &'item [&T],
+) -> (M, M)
 where
     T: Debug + 'item,
     M: Multiset<&'item T>,
-    I: Iterator<Item = &'item T>
+    I: Iterator<Item = &'item T>,
 {
     let expected_items: Vec<&T> = borrow_all(expected_items);
     let mut missing_multiset = expected_items.iter().cloned().collect::<M>();
@@ -108,11 +108,13 @@ where
     (missing_multiset, superfluous_multiset)
 }
 
-pub(crate) fn format_error_for_missing_and_superfluous<T, M>(missing_items: &M,
-    superfluous_items: &M) -> String
+pub(crate) fn format_error_for_missing_and_superfluous<T, M>(
+    missing_items: &M,
+    superfluous_items: &M,
+) -> String
 where
     T: Debug,
-    M: Multiset<T>
+    M: Multiset<T>,
 {
     let mut errors = Vec::new();
 
@@ -128,72 +130,99 @@ where
 }
 
 pub(crate) fn check_contains_all_of<'collection, 'item, C, I, M>(
-    assert_that: &AssertThat<C>, actual_items: I, expected_items: &'item [&C::Item])
-where
+    assert_that: &AssertThat<C>,
+    actual_items: I,
+    expected_items: &'item [&C::Item],
+) where
     C: Collection<'collection>,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
-    M: Multiset<&'item C::Item>
+    M: Multiset<&'item C::Item>,
 {
     let (missing_multiset, _) =
-        compute_missing_and_superfluous::<_, M, _>(
-            actual_items, expected_items);
+        compute_missing_and_superfluous::<_, M, _>(actual_items, expected_items);
 
     if !missing_multiset.is_empty() {
-        let expected_items_debug = CollectionDebug { collection: &expected_items };
-        let collection_debug = CollectionDebug { collection: &assert_that.data };
+        let expected_items_debug = CollectionDebug {
+            collection: &expected_items,
+        };
+        let collection_debug = CollectionDebug {
+            collection: &assert_that.data,
+        };
 
         Failure::new(assert_that)
             .expected_it(format!("to contain all of <{:?}>", expected_items_debug))
-            .but_it(format!("was <{:?}>, which lacks {:?}",
-                collection_debug, &missing_multiset))
+            .but_it(format!(
+                "was <{:?}>, which lacks {:?}",
+                collection_debug, &missing_multiset
+            ))
             .fail();
     }
 }
 
 pub(crate) fn check_contains_none_of<'collection, 'item, C, I, S>(
-    assert_that: &AssertThat<C>, actual_items: I, unexpected_items: Vec<&'item C::Item>)
-where
+    assert_that: &AssertThat<C>,
+    actual_items: I,
+    unexpected_items: Vec<&'item C::Item>,
+) where
     C: Collection<'collection>,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
-    S: Set<&'item C::Item>
+    S: Set<&'item C::Item>,
 {
     let unexpected_items_set = S::from_iter(unexpected_items.iter().cloned());
 
     for (index, item) in actual_items.enumerate() {
         if unexpected_items_set.contains(&item) {
-            let unexpected_items_debug = CollectionDebug { collection: &unexpected_items };
+            let unexpected_items_debug = CollectionDebug {
+                collection: &unexpected_items,
+            };
 
             Failure::new(assert_that)
-                .expected_it(format!("not to contain any of <{:?}>", unexpected_items_debug))
-                .but_it(format!("was <{:?}>",
+                .expected_it(format!(
+                    "not to contain any of <{:?}>",
+                    unexpected_items_debug
+                ))
+                .but_it(format!(
+                    "was <{:?}>",
                     HighlightedCollectionDebug::with_single_highlighted_element(
-                        &assert_that.data, index)))
+                        &assert_that.data,
+                        index
+                    )
+                ))
                 .fail();
         }
     }
 }
 
 pub(crate) fn check_contains_exactly_in_any_order<'collection, 'item, C, I, M>(
-    assert_that: &AssertThat<C>, actual_items: I, expected_items: &'item [&C::Item])
-where
+    assert_that: &AssertThat<C>,
+    actual_items: I,
+    expected_items: &'item [&C::Item],
+) where
     C: Collection<'collection>,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
-    M: Multiset<&'item C::Item>
+    M: Multiset<&'item C::Item>,
 {
     let (missing_multiset, superfluous_multiset) =
         compute_missing_and_superfluous::<_, M, _>(actual_items, expected_items);
 
     if !missing_multiset.is_empty() || !superfluous_multiset.is_empty() {
-        let expected_items_debug = CollectionDebug { collection: &expected_items };
-        let collection_debug = CollectionDebug { collection: &assert_that.data };
+        let expected_items_debug = CollectionDebug {
+            collection: &expected_items,
+        };
+        let collection_debug = CollectionDebug {
+            collection: &assert_that.data,
+        };
         let error =
             format_error_for_missing_and_superfluous(&missing_multiset, &superfluous_multiset);
 
         Failure::new(assert_that)
-            .expected_it(format!("to contain exactly in any order <{:?}>", expected_items_debug))
+            .expected_it(format!(
+                "to contain exactly in any order <{:?}>",
+                expected_items_debug
+            ))
             .but_it(format!("was <{:?}>, which {}", collection_debug, error))
             .fail();
     }
@@ -202,15 +231,24 @@ where
 impl<'collection, C> CollectionPartialEqAssertions<'collection, C> for AssertThat<C>
 where
     C: Collection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     fn contains<E: Borrow<C::Item>>(self, item: E) -> Self {
         let item = item.borrow();
 
-        if !self.data.iterator().any(|collection_item| collection_item == item) {
+        if !self
+            .data
+            .iterator()
+            .any(|collection_item| collection_item == item)
+        {
             Failure::new(&self)
                 .expected_it(format!("to contain <{:?}>", item))
-                .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
+                .but_it(format!(
+                    "was <{:?}>",
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail();
         }
 
@@ -221,7 +259,11 @@ where
         let item = item.borrow();
         let expected_it = format!("not to contain <{:?}>", item);
 
-        assert_all_match_predicate(self, |collection_item| collection_item != item, &expected_it)
+        assert_all_match_predicate(
+            self,
+            |collection_item| collection_item != item,
+            &expected_it,
+        )
     }
 
     fn contains_all_of<E: Borrow<C::Item>, I: IntoIterator<Item = E>>(self, items: I) -> Self {
@@ -245,13 +287,16 @@ where
     fn contains_exactly_in_any_order<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
 
         check_contains_exactly_in_any_order::<_, _, VecMultiset<_>>(
-            &self, self.data.iterator(), &expected_items);
+            &self,
+            self.data.iterator(),
+            &expected_items,
+        );
 
         self
     }
@@ -274,7 +319,7 @@ where
 /// ```
 pub trait OrderedCollectionPartialEqAssertions<'collection, C>
 where
-    C: OrderedCollection<'collection>
+    C: OrderedCollection<'collection>,
 {
     /// Asserts that there is a contiguous subsequence in the tested collection that equals the
     /// given `subsequence` in order according to [PartialEq].
@@ -333,20 +378,24 @@ where
         I: IntoIterator<Item = E>;
 }
 
-fn find_contiguous_subsequence<'collection, C>(collection: &C, subsequence: &[&C::Item])
-    -> Option<Vec<Range<usize>>>
+fn find_contiguous_subsequence<'collection, C>(
+    collection: &C,
+    subsequence: &[&C::Item],
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     find_contiguous_subsequence_by(collection, subsequence, PartialEq::eq)
 }
 
-fn find_subsequence<'collection, C>(collection: &C, subsequence: &[&C::Item])
-    -> Option<Vec<Range<usize>>>
+fn find_subsequence<'collection, C>(
+    collection: &C,
+    subsequence: &[&C::Item],
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     find_subsequence_by(collection, subsequence, PartialEq::eq)
 }
@@ -354,7 +403,7 @@ where
 fn find_prefix<'collection, C>(collection: &C, prefix: &[&C::Item]) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     find_prefix_by(collection, prefix, PartialEq::eq)
 }
@@ -362,30 +411,40 @@ where
 fn find_suffix<'collection, C>(collection: &C, suffix: &[&C::Item]) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     find_suffix_by(collection, suffix, PartialEq::eq)
 }
 
-fn assert_contains_subsequence_kind<'collection, C, E, I, F>(assert_that: AssertThat<C>,
-    subsequence_of_kind: I, find_subsequence_of_kind: F, expected_it_prefix: &str) -> AssertThat<C>
+fn assert_contains_subsequence_kind<'collection, C, E, I, F>(
+    assert_that: AssertThat<C>,
+    subsequence_of_kind: I,
+    find_subsequence_of_kind: F,
+    expected_it_prefix: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
-    F: FnOnce(&C, &[&C::Item]) -> Option<Vec<Range<usize>>>
+    F: FnOnce(&C, &[&C::Item]) -> Option<Vec<Range<usize>>>,
 {
     let subsequence_of_kind_vec_unborrowed = subsequence_of_kind.into_iter().collect::<Vec<_>>();
     let subsequence_of_kind_vec: Vec<&C::Item> = borrow_all(&subsequence_of_kind_vec_unborrowed);
 
     if find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec).is_none() {
-        let subsequence_of_kind_debug = CollectionDebug { collection: &subsequence_of_kind_vec };
-        let collection_debug = CollectionDebug { collection: &assert_that.data };
+        let subsequence_of_kind_debug = CollectionDebug {
+            collection: &subsequence_of_kind_vec,
+        };
+        let collection_debug = CollectionDebug {
+            collection: &assert_that.data,
+        };
 
         Failure::new(&assert_that)
-            .expected_it(
-                format!("{} <{:?}>", expected_it_prefix, subsequence_of_kind_debug))
+            .expected_it(format!(
+                "{} <{:?}>",
+                expected_it_prefix, subsequence_of_kind_debug
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -393,29 +452,38 @@ where
     assert_that
 }
 
-fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, F>(assert_that: AssertThat<C>,
-    subsequence_of_kind: I, find_subsequence_of_kind: F, expected_it_prefix: &str) -> AssertThat<C>
+fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, F>(
+    assert_that: AssertThat<C>,
+    subsequence_of_kind: I,
+    find_subsequence_of_kind: F,
+    expected_it_prefix: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: Debug + PartialEq,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
-    F: FnOnce(&C, &[&C::Item]) -> Option<Vec<Range<usize>>>
+    F: FnOnce(&C, &[&C::Item]) -> Option<Vec<Range<usize>>>,
 {
     let subsequence_of_kind_vec_unborrowed = subsequence_of_kind.into_iter().collect::<Vec<_>>();
     let subsequence_of_kind_vec: Vec<&C::Item> = borrow_all(&subsequence_of_kind_vec_unborrowed);
 
     if let Some(first_occurrence_ranges) =
-        find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec) {
-        let subsequence_of_kind_debug = CollectionDebug { collection: &subsequence_of_kind_vec };
+        find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec)
+    {
+        let subsequence_of_kind_debug = CollectionDebug {
+            collection: &subsequence_of_kind_vec,
+        };
         let collection_debug = HighlightedCollectionDebug {
             collection: &assert_that.data,
-            highlighted_sections: first_occurrence_ranges
+            highlighted_sections: first_occurrence_ranges,
         };
 
         Failure::new(&assert_that)
-            .expected_it(format!("{} <{:?}>",
-                expected_it_prefix, subsequence_of_kind_debug))
+            .expected_it(format!(
+                "{} <{:?}>",
+                expected_it_prefix, subsequence_of_kind_debug
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -426,48 +494,64 @@ where
 impl<'collection, C> OrderedCollectionPartialEqAssertions<'collection, C> for AssertThat<C>
 where
     C: OrderedCollection<'collection>,
-    C::Item: Debug + PartialEq
+    C::Item: Debug + PartialEq,
 {
     fn contains_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
-        assert_contains_subsequence_kind(self,
-            subsequence, find_contiguous_subsequence, "to contain the contiguous subsequence")
+        assert_contains_subsequence_kind(
+            self,
+            subsequence,
+            find_contiguous_subsequence,
+            "to contain the contiguous subsequence",
+        )
     }
 
     fn does_not_contain_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
-        assert_does_not_contain_subsequence_kind(self,
-            subsequence, find_contiguous_subsequence, "not to contain the contiguous subsequence")
+        assert_does_not_contain_subsequence_kind(
+            self,
+            subsequence,
+            find_contiguous_subsequence,
+            "not to contain the contiguous subsequence",
+        )
     }
 
     fn contains_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_contains_subsequence_kind(
-            self, subsequence, find_subsequence, "to contain the subsequence")
+            self,
+            subsequence,
+            find_subsequence,
+            "to contain the subsequence",
+        )
     }
 
     fn does_not_contain_subsequence<E, I>(self, subsequence: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_does_not_contain_subsequence_kind(
-            self, subsequence, find_subsequence, "not to contain the subsequence")
+            self,
+            subsequence,
+            find_subsequence,
+            "not to contain the subsequence",
+        )
     }
 
     fn starts_with<E, I>(self, prefix: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_contains_subsequence_kind(self, prefix, find_prefix, "to start with the prefix")
     }
@@ -475,16 +559,20 @@ where
     fn does_not_start_with<E, I>(self, prefix: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_does_not_contain_subsequence_kind(
-            self, prefix, find_prefix, "not to start with the prefix")
+            self,
+            prefix,
+            find_prefix,
+            "not to start with the prefix",
+        )
     }
 
     fn ends_with<E, I>(self, suffix: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_contains_subsequence_kind(self, suffix, find_suffix, "to end with the suffix")
     }
@@ -492,16 +580,20 @@ where
     fn does_not_end_with<E, I>(self, suffix: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_does_not_contain_subsequence_kind(
-            self, suffix, find_suffix, "not to end with the suffix")
+            self,
+            suffix,
+            find_suffix,
+            "not to end with the suffix",
+        )
     }
 
     fn contains_exactly_in_given_order<E, I>(self, items: I) -> Self
     where
         E: Borrow<C::Item>,
-        I: IntoIterator<Item = E>
+        I: IntoIterator<Item = E>,
     {
         assert_contains_exactly_in_given_order_by(self, items, PartialEq::eq, "")
     }
@@ -509,10 +601,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::assert_fails;
     use crate::prelude::*;
-
-    use super::*;
 
     #[test]
     fn contains_passes_for_array_containing_only_item() {

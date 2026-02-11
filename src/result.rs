@@ -21,7 +21,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!(u32::from_str("hello")).is_err();
 /// ```
 pub trait ResultAssertions<V, E> {
-
     /// Asserts that the tested result is an `Ok` variant, i.e. there is no error.
     fn is_ok(self) -> Self;
 
@@ -45,7 +44,7 @@ fn assert_is_ok<V, E, R>(assert_that: &AssertThat<R>)
 where
     V: Debug,
     E: Debug,
-    R: Borrow<Result<V, E>>
+    R: Borrow<Result<V, E>>,
 {
     if assert_that.data.borrow().is_err() {
         Failure::new(assert_that)
@@ -59,7 +58,7 @@ fn assert_is_err<V, E, R>(assert_that: &AssertThat<R>)
 where
     V: Debug,
     E: Debug,
-    R: Borrow<Result<V, E>>
+    R: Borrow<Result<V, E>>,
 {
     if assert_that.data.borrow().is_ok() {
         Failure::new(assert_that)
@@ -73,7 +72,7 @@ impl<V, E, R> ResultAssertions<V, E> for AssertThat<R>
 where
     V: Debug,
     E: Debug,
-    R: Borrow<Result<V, E>>
+    R: Borrow<Result<V, E>>,
 {
     fn is_ok(self) -> Self {
         assert_is_ok(&self);
@@ -89,25 +88,25 @@ where
 
     fn to_value_ref<'reference>(&'reference self) -> AssertThat<&'reference V>
     where
-        E: 'reference
+        E: 'reference,
     {
         assert_is_ok(self);
 
         AssertThat {
             data: self.data.borrow().as_ref().unwrap(),
-            expression: format!("value of <{}>", self.expression)
+            expression: format!("value of <{}>", self.expression),
         }
     }
 
     fn to_error_ref<'reference>(&'reference self) -> AssertThat<&'reference E>
     where
-        V: 'reference
+        V: 'reference,
     {
         assert_is_err(self);
 
         AssertThat {
             data: self.data.borrow().as_ref().unwrap_err(),
-            expression: format!("error of <{}>", self.expression)
+            expression: format!("error of <{}>", self.expression),
         }
     }
 }
@@ -125,7 +124,6 @@ where
 /// assert_that!(Err("message") as Result<u32, &str>).to_error().contains("mess");
 /// ```
 pub trait OwnedResultAssertions<V, E> {
-
     /// Asserts that the tested result is ok (see [ResultAssertions::is_ok]) and returns a new
     /// [AssertThat] instance that allows assertions on its owned value.
     fn to_value(self) -> AssertThat<V>;
@@ -141,7 +139,7 @@ impl<V: Debug, E: Debug> OwnedResultAssertions<V, E> for AssertThat<Result<V, E>
 
         AssertThat {
             data: self.data.unwrap(),
-            expression: format!("value of <{}>", self.expression)
+            expression: format!("value of <{}>", self.expression),
         }
     }
 
@@ -150,7 +148,7 @@ impl<V: Debug, E: Debug> OwnedResultAssertions<V, E> for AssertThat<Result<V, E>
 
         AssertThat {
             data: self.data.unwrap_err(),
-            expression: format!("error of <{}>", self.expression)
+            expression: format!("error of <{}>", self.expression),
         }
     }
 }
@@ -169,7 +167,6 @@ impl<V: Debug, E: Debug> OwnedResultAssertions<V, E> for AssertThat<Result<V, E>
 /// assert_that!(u32::from_str("hello")).does_not_contain_value(0);
 /// ```
 pub trait ResultValuePartialEqAssertions<V, E> {
-
     /// Asserts that the tested result is an `Ok` variant that contains the given `expected` value.
     fn contains_value<B: Borrow<V>>(self, expected: B) -> Self;
 
@@ -183,7 +180,7 @@ impl<V, E, R> ResultValuePartialEqAssertions<V, E> for AssertThat<R>
 where
     V: Debug + PartialEq,
     E: Debug,
-    R: Borrow<Result<V, E>>
+    R: Borrow<Result<V, E>>,
 {
     fn contains_value<B: Borrow<V>>(self, expected: B) -> Self {
         let expected = expected.borrow();
@@ -197,7 +194,7 @@ where
             Err(_) => Failure::new(&self)
                 .expected_it("to be ok")
                 .but_it(format!("was <{:?}>", self.data.borrow()))
-                .fail()
+                .fail(),
         }
     }
 
@@ -232,7 +229,6 @@ where
 /// assert_that!(ok_result).does_not_contain_error("some error");
 /// ```
 pub trait ResultErrorPartialEqAssertions<V, E> {
-
     /// Asserts that the tested result is an `Err` variant that contains the given `expected` error.
     fn contains_error<B: Borrow<E>>(self, expected: B) -> Self;
 
@@ -246,7 +242,7 @@ impl<V, E, R> ResultErrorPartialEqAssertions<V, E> for AssertThat<R>
 where
     V: Debug,
     E: Debug + PartialEq,
-    R: Borrow<Result<V, E>>
+    R: Borrow<Result<V, E>>,
 {
     fn contains_error<B: Borrow<E>>(self, expected: B) -> Self {
         let expected = expected.borrow();
@@ -260,7 +256,7 @@ where
             Ok(_) => Failure::new(&self)
                 .expected_it("to be an error")
                 .but_it(format!("was <{:?}>", self.data.borrow()))
-                .fail()
+                .fail(),
         }
     }
 
@@ -268,7 +264,7 @@ where
         let unexpected = unexpected.borrow();
         let contains_unexpected_error = match self.data.borrow() {
             Err(error) => error == unexpected,
-            _ => false
+            _ => false,
         };
 
         if contains_unexpected_error {

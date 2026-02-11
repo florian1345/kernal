@@ -31,7 +31,6 @@ use crate::{AssertThat, Failure};
 /// assert_that!(MyError).has_message("test message").does_not_have_source();
 /// ```
 pub trait ErrorAssertions {
-
     /// Asserts that the message obtained by using the [Display](std::fmt::Display) implementation
     /// of the tested error is equal to the given `expected_message`.
     fn has_message<M: Borrow<str>>(self, expected_message: M) -> Self;
@@ -46,15 +45,16 @@ pub trait ErrorAssertions {
 }
 
 impl<T: Error> ErrorAssertions for AssertThat<T> {
-
     fn has_message<M: Borrow<str>>(self, expected_message: M) -> Self {
         let message = self.data.to_string();
         let expected_message = expected_message.borrow();
 
         if message != expected_message {
             Failure::new(&self)
-                .expected_it(format!("to have the error message <{}>",
-                    expected_message.escape_debug()))
+                .expected_it(format!(
+                    "to have the error message <{}>",
+                    expected_message.escape_debug()
+                ))
                 .but_it(format!("had the message <{}>", message.escape_debug()))
                 .fail()
         }
@@ -64,7 +64,10 @@ impl<T: Error> ErrorAssertions for AssertThat<T> {
 
     fn has_source(self) -> Self {
         if self.data.source().is_none() {
-            Failure::new(&self).expected_it("to have an error source").but_it("did not").fail();
+            Failure::new(&self)
+                .expected_it("to have an error source")
+                .but_it("did not")
+                .fail();
         }
 
         self
@@ -72,7 +75,10 @@ impl<T: Error> ErrorAssertions for AssertThat<T> {
 
     fn does_not_have_source(self) -> Self {
         if self.data.source().is_some() {
-            Failure::new(&self).expected_it("not to have an error source").but_it("did").fail();
+            Failure::new(&self)
+                .expected_it("not to have an error source")
+                .but_it("did")
+                .fail();
         }
 
         self
@@ -84,9 +90,8 @@ mod tests {
 
     use std::fmt::{self, Display, Formatter};
 
-    use crate::{assert_fails, assert_that};
-
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[derive(Debug)]
     struct InnerError;
@@ -97,26 +102,26 @@ mod tests {
         }
     }
 
-    impl Error for InnerError { }
+    impl Error for InnerError {}
 
     #[derive(Debug)]
     struct MockError {
         message: String,
-        source: Option<InnerError>
+        source: Option<InnerError>,
     }
 
     impl MockError {
         fn with_source(message: impl Into<String>) -> MockError {
             MockError {
                 message: message.into(),
-                source: Some(InnerError)
+                source: Some(InnerError),
             }
         }
 
         fn without_source(message: impl Into<String>) -> MockError {
             MockError {
                 message: message.into(),
-                source: None
+                source: None,
             }
         }
     }
@@ -139,7 +144,7 @@ mod tests {
     #[test]
     fn has_message_passes_for_correct_message() {
         let error = MockError::without_source("the message");
-        
+
         assert_that!(error).has_message("the message");
     }
 

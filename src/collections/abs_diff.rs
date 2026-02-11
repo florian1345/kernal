@@ -7,26 +7,40 @@ use std::fmt::Debug;
 use std::ops::Range;
 
 use crate::abs_diff::AbsDiff;
-use crate::{AssertThat, Failure};
-use crate::collections::{Collection, CollectionDebug, HighlightedCollectionDebug, find_contiguous_subsequence_by, find_prefix_by, find_subsequence_by, find_suffix_by, assert_contains_exactly_in_given_order_by};
 use crate::collections::ordered::OrderedCollection;
+use crate::collections::{
+    Collection,
+    CollectionDebug,
+    HighlightedCollectionDebug,
+    assert_contains_exactly_in_given_order_by,
+    find_contiguous_subsequence_by,
+    find_prefix_by,
+    find_subsequence_by,
+    find_suffix_by,
+};
 use crate::util::borrow_all;
+use crate::{AssertThat, Failure};
 
-fn highlight_violating_index<'collection, 'reference, C, P>(collection: &'reference C, predicate: P)
-    -> Option<HighlightedCollectionDebug<Vec<&'reference C::Item>>>
+fn highlight_violating_index<'collection, 'reference, C, P>(
+    collection: &'reference C,
+    predicate: P,
+) -> Option<HighlightedCollectionDebug<Vec<&'reference C::Item>>>
 where
     C: Collection<'collection>,
     P: Fn(&C::Item) -> bool,
-    'collection: 'reference
+    'collection: 'reference,
 {
     let items: Vec<&C::Item> = collection.iterator().collect::<Vec<_>>();
 
-    let violating_index = items.iter().enumerate()
+    let violating_index = items
+        .iter()
+        .enumerate()
         .find(|(_, &item)| !predicate(item))
         .map(|(index, _)| index);
 
-    violating_index.map(|violating_index|
-        HighlightedCollectionDebug::with_single_highlighted_element(items, violating_index))
+    violating_index.map(|violating_index| {
+        HighlightedCollectionDebug::with_single_highlighted_element(items, violating_index)
+    })
 }
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
@@ -48,9 +62,8 @@ pub trait CollectionAbsDiffAssertions<'collection, C>
 where
     C: Collection<'collection>,
     C::Item: AbsDiff,
-    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd
+    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {
-
     /// Asserts that the tested collection contains at least one item that is within `offset` of
     /// `expected` according to [AbsDiff] and [PartialOrd]. More formally, for some item `e` it
     /// holds that `e.abs_diff(expected) <= offset`.
@@ -87,10 +100,16 @@ where
         O: Borrow<<C::Item as AbsDiff>::ReturnType> + Debug;
 }
 
-fn can_match_item_to_expected_rec<T, F>(items: &[T], expected: &[T], index_to_match: usize,
-    visited: &mut [bool], matched_indices: &mut [Option<usize>], is_match: &F) -> bool
+fn can_match_item_to_expected_rec<T, F>(
+    items: &[T],
+    expected: &[T],
+    index_to_match: usize,
+    visited: &mut [bool],
+    matched_indices: &mut [Option<usize>],
+    is_match: &F,
+) -> bool
 where
-    F: Fn(&T, &T) -> bool
+    F: Fn(&T, &T) -> bool,
 {
     let item = &items[index_to_match];
 
@@ -101,7 +120,13 @@ where
             let can_match_with_expected = match matched_indices[option_idx] {
                 None => true,
                 Some(matched_idx) => can_match_item_to_expected_rec(
-                    items, expected, matched_idx, visited, matched_indices, is_match)
+                    items,
+                    expected,
+                    matched_idx,
+                    visited,
+                    matched_indices,
+                    is_match,
+                ),
             };
 
             if can_match_with_expected {
@@ -114,27 +139,43 @@ where
     false
 }
 
-fn can_match_item_to_expected<T, F>(items: &[T], expected: &[T], index_to_match: usize,
-    matched_indices: &mut [Option<usize>], is_match: &F) -> bool
+fn can_match_item_to_expected<T, F>(
+    items: &[T],
+    expected: &[T],
+    index_to_match: usize,
+    matched_indices: &mut [Option<usize>],
+    is_match: &F,
+) -> bool
 where
-    F: Fn(&T, &T) -> bool
+    F: Fn(&T, &T) -> bool,
 {
     let mut visited = vec![false; expected.len()];
 
     can_match_item_to_expected_rec(
-        items, expected, index_to_match, &mut visited, matched_indices, is_match)
+        items,
+        expected,
+        index_to_match,
+        &mut visited,
+        matched_indices,
+        is_match,
+    )
 }
 
 fn count_items_matchable_to_expected<T, F>(items: &[T], expected: &[T], is_match: F) -> usize
 where
-    F: Fn(&T, &T) -> bool
+    F: Fn(&T, &T) -> bool,
 {
     let mut matched_indices = vec![None; expected.len()];
     let mut result = 0;
 
     for index_to_match in 0..items.len() {
         if can_match_item_to_expected(
-                items, expected, index_to_match, &mut matched_indices, &is_match) {
+            items,
+            expected,
+            index_to_match,
+            &mut matched_indices,
+            &is_match,
+        ) {
             result += 1;
         }
     }
@@ -146,21 +187,32 @@ impl<'collection, C> CollectionAbsDiffAssertions<'collection, C> for AssertThat<
 where
     C: Collection<'collection>,
     C::Item: AbsDiff + Debug,
-    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd
+    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {
     fn contains_items_close_to<E, O>(self, expected: E, offset: O) -> Self
     where
         E: Borrow<C::Item>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
         let expected = expected.borrow();
         let offset = offset.borrow();
 
-        if !self.data.iterator().any(|item| &item.abs_diff(expected) <= offset) {
+        if !self
+            .data
+            .iterator()
+            .any(|item| &item.abs_diff(expected) <= offset)
+        {
             Failure::new(&self)
-                .expected_it(
-                    format!("to contain an element within <{:?}> of <{:?}>", offset, expected))
-                .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
+                .expected_it(format!(
+                    "to contain an element within <{:?}> of <{:?}>",
+                    offset, expected
+                ))
+                .but_it(format!(
+                    "was <{:?}>",
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail();
         }
 
@@ -170,7 +222,7 @@ where
     fn contains_only_items_close_to<E, O>(self, expected: E, offset: O) -> Self
     where
         E: Borrow<C::Item>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
         let expected = expected.borrow();
         let offset = offset.borrow();
@@ -179,8 +231,10 @@ where
 
         if let Some(highlighted_collection_debug) = highlighted_collection_debug {
             Failure::new(&self)
-                .expected_it(
-                    format!("to only contain elements within <{:?}> of <{:?}>", offset, expected))
+                .expected_it(format!(
+                    "to only contain elements within <{:?}> of <{:?}>",
+                    offset, expected
+                ))
                 .but_it(format!("was <{:?}>", highlighted_collection_debug))
                 .fail()
         }
@@ -191,7 +245,7 @@ where
     fn does_not_contain_items_close_to<E, O>(self, expected: E, offset: O) -> Self
     where
         E: Borrow<C::Item>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
         let expected = expected.borrow();
         let offset = offset.borrow();
@@ -200,8 +254,10 @@ where
 
         if let Some(highlighted_collection_debug) = highlighted_collection_debug {
             Failure::new(&self)
-                .expected_it(
-                    format!("to contain no elements within <{:?}> of <{:?}>", offset, expected))
+                .expected_it(format!(
+                    "to contain no elements within <{:?}> of <{:?}>",
+                    offset, expected
+                ))
                 .but_it(format!("was <{:?}>", highlighted_collection_debug))
                 .fail()
         }
@@ -213,23 +269,34 @@ where
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
         let actual_items: Vec<&C::Item> = self.data.iterator().collect();
         let expected_items_unborrowed = items.into_iter().collect::<Vec<_>>();
         let expected_items: Vec<&C::Item> = borrow_all(&expected_items_unborrowed);
         let offset = offset.borrow();
-        let is_match = |actual_item: &&C::Item, expected_item: &&C::Item|
-            &actual_item.abs_diff(expected_item) <= offset;
+        let is_match = |actual_item: &&C::Item, expected_item: &&C::Item| {
+            &actual_item.abs_diff(expected_item) <= offset
+        };
         let len = actual_items.len();
 
-        if len != expected_items.len() ||
-                count_items_matchable_to_expected(&actual_items, &expected_items, is_match) != len {
+        if len != expected_items.len()
+            || count_items_matchable_to_expected(&actual_items, &expected_items, is_match) != len
+        {
             Failure::new(&self)
                 .expected_it(format!(
                     "to contain exactly elements <{:?}> in any order within a margin of <{:?}>",
-                    CollectionDebug { collection: &expected_items }, offset))
-                .but_it(format!("was <{:?}>", CollectionDebug { collection: &self.data }))
+                    CollectionDebug {
+                        collection: &expected_items
+                    },
+                    offset
+                ))
+                .but_it(format!(
+                    "was <{:?}>",
+                    CollectionDebug {
+                        collection: &self.data
+                    }
+                ))
                 .fail();
         }
 
@@ -255,9 +322,8 @@ where
 pub trait OrderedCollectionAbsDiffAssertions<'collection, C>
 where
     C: OrderedCollection<'collection>,
-    C::Item: AbsDiff
+    C::Item: AbsDiff,
 {
-
     /// Asserts that there is a contiguous subsequence in the tested collection in which each item
     /// is within `offset` of the item at the same position in the given `subsequence` according to
     /// [AbsDiff] and [PartialOrd]. More formally, given `subsequence` has a length of `n`, for some
@@ -276,8 +342,11 @@ where
     /// `n`, there is **no** contiguous subsequence `e_0, ..., e_{n-1}` of the tested collection
     /// such that `e_0.abs_diff(subsequence[0]) <= offset && ... &&
     /// e_{n-1}.abs_diff(subsequence[n-1]) <= offset`.
-    fn does_not_contain_contiguous_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O)
-        -> Self
+    fn does_not_contain_contiguous_subsequence_close_to<E, I, O>(
+        self,
+        subsequence: I,
+        offset: O,
+    ) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -301,8 +370,7 @@ where
     /// `subsequence` has a length of `n`, there is **no** subsequence `e_0, ..., e_{n-1}` of the
     /// tested collection such that `e_0.abs_diff(subsequence[0]) <= offset && ... &&
     /// e_{n-1}.abs_diff(subsequence[n-1]) <= offset`.
-    fn does_not_contain_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O)
-        -> Self
+    fn does_not_contain_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -313,8 +381,7 @@ where
     /// More formally, given `prefix` has a length of `n`, the tested collection is of the form
     /// `e_0, ..., e_{n-1}, ...` with `e_0.abs_diff(prefix[0]) <= offset && ... &&
     /// e_{n-1}.abs_diff(prefix[n-1]) <= offset`.
-    fn starts_with_close_to<E, I, O>(self, prefix: I, offset: O)
-        -> Self
+    fn starts_with_close_to<E, I, O>(self, prefix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -325,8 +392,7 @@ where
     /// [PartialOrd]. More formally, given `prefix` has a length of `n`, the tested collection is
     /// shorter than `n` or of the form `e_0, ..., e_{n-1}, ...` with `e_0.abs_diff(prefix[0]) >
     /// offset || ... || e_{n-1}.abs_diff(prefix[n-1]) > offset`.
-    fn does_not_start_with_close_to<E, I, O>(self, prefix: I, offset: O)
-        -> Self
+    fn does_not_start_with_close_to<E, I, O>(self, prefix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -337,8 +403,7 @@ where
     /// More formally, given `suffix` has a length of `n`, the tested collection is of the form
     /// `..., e_0, ..., e_{n-1}` with `e_0.abs_diff(suffix[0]) <= offset && ... &&
     /// e_{n-1}.abs_diff(suffix[n-1]) <= offset`.
-    fn ends_with_close_to<E, I, O>(self, suffix: I, offset: O)
-        -> Self
+    fn ends_with_close_to<E, I, O>(self, suffix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -349,8 +414,7 @@ where
     /// [PartialOrd]. More formally, given `suffix` has a length of `n`, the tested collection is
     /// shorter than `n` or of the form `..., e_0, ..., e_{n-1}` with `e_0.abs_diff(suffix[0]) >
     /// offset || ... || e_{n-1}.abs_diff(suffix[n-1]) > offset`.
-    fn does_not_end_with_close_to<E, I, O>(self, suffix: I, offset: O)
-        -> Self
+    fn does_not_end_with_close_to<E, I, O>(self, suffix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
@@ -361,61 +425,80 @@ where
     /// formally, given `items` has a length of `n`, the tested collection is of the form `e_0, ...,
     /// e_{n-1}` and `e_0.abs_diff(items[0]) <= offset && ... && e_{n-1}.abs_diff(items[n-1]) <=
     /// offset`.
-    fn contains_exactly_in_given_order_close_to<E, I, O>(self, items: I, offset: O)
-        -> Self
+    fn contains_exactly_in_given_order_close_to<E, I, O>(self, items: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
         O: Borrow<<C::Item as AbsDiff>::ReturnType>;
 }
 
-fn find_contiguous_subsequence_close_to<'collection, C>(collection: &C, subsequence: &[&C::Item],
-    offset: &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+fn find_contiguous_subsequence_close_to<'collection, C>(
+    collection: &C,
+    subsequence: &[&C::Item],
+    offset: &<C::Item as AbsDiff>::ReturnType,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff,
-    <C::Item as AbsDiff>::ReturnType: PartialOrd
+    <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
-    find_contiguous_subsequence_by(
-        collection, subsequence, |item_1, item_2| &item_1.abs_diff(item_2) <= offset)
+    find_contiguous_subsequence_by(collection, subsequence, |item_1, item_2| {
+        &item_1.abs_diff(item_2) <= offset
+    })
 }
 
-fn find_subsequence_close_to<'collection, C>(collection: &C, subsequence: &[&C::Item],
-    offset: &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+fn find_subsequence_close_to<'collection, C>(
+    collection: &C,
+    subsequence: &[&C::Item],
+    offset: &<C::Item as AbsDiff>::ReturnType,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff,
-    <C::Item as AbsDiff>::ReturnType: PartialOrd
+    <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
-    find_subsequence_by(
-        collection, subsequence, |item_1, item_2| &item_1.abs_diff(item_2) <= offset)
+    find_subsequence_by(collection, subsequence, |item_1, item_2| {
+        &item_1.abs_diff(item_2) <= offset
+    })
 }
 
-fn find_prefix_close_to<'collection, C>(collection: &C, prefix: &[&C::Item],
-    offset: &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+fn find_prefix_close_to<'collection, C>(
+    collection: &C,
+    prefix: &[&C::Item],
+    offset: &<C::Item as AbsDiff>::ReturnType,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff,
-    <C::Item as AbsDiff>::ReturnType: PartialOrd
+    <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
-    find_prefix_by(
-        collection, prefix, |item_1, item_2| &item_1.abs_diff(item_2) <= offset)
+    find_prefix_by(collection, prefix, |item_1, item_2| {
+        &item_1.abs_diff(item_2) <= offset
+    })
 }
 
-fn find_suffix_close_to<'collection, C>(collection: &C, suffix: &[&C::Item],
-    offset: &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+fn find_suffix_close_to<'collection, C>(
+    collection: &C,
+    suffix: &[&C::Item],
+    offset: &<C::Item as AbsDiff>::ReturnType,
+) -> Option<Vec<Range<usize>>>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff,
-    <C::Item as AbsDiff>::ReturnType: PartialOrd
+    <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
-    find_suffix_by(
-        collection, suffix, |item_1, item_2| &item_1.abs_diff(item_2) <= offset)
+    find_suffix_by(collection, suffix, |item_1, item_2| {
+        &item_1.abs_diff(item_2) <= offset
+    })
 }
 
-fn assert_contains_subsequence_kind<'collection, C, E, I, O, F>(assert_that: AssertThat<C>,
-    subsequence_of_kind: I, offset: O, find_subsequence_of_kind: F, expected_it_prefix: &str)
-    -> AssertThat<C>
+fn assert_contains_subsequence_kind<'collection, C, E, I, O, F>(
+    assert_that: AssertThat<C>,
+    subsequence_of_kind: I,
+    offset: O,
+    find_subsequence_of_kind: F,
+    expected_it_prefix: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff + Debug,
@@ -423,19 +506,25 @@ where
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
     O: Borrow<<C::Item as AbsDiff>::ReturnType>,
-    F: FnOnce(&C, &[&C::Item], &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+    F: FnOnce(&C, &[&C::Item], &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>,
 {
     let subsequence_of_kind_vec_unborrowed = subsequence_of_kind.into_iter().collect::<Vec<_>>();
     let subsequence_of_kind_vec: Vec<&C::Item> = borrow_all(&subsequence_of_kind_vec_unborrowed);
     let offset = offset.borrow();
 
     if find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec, offset).is_none() {
-        let subsequence_of_kind_debug = CollectionDebug { collection: &subsequence_of_kind_vec };
-        let collection_debug = CollectionDebug { collection: &assert_that.data };
+        let subsequence_of_kind_debug = CollectionDebug {
+            collection: &subsequence_of_kind_vec,
+        };
+        let collection_debug = CollectionDebug {
+            collection: &assert_that.data,
+        };
 
         Failure::new(&assert_that)
-            .expected_it(format!("{} <{:?}> within a margin of <{:?}>",
-                expected_it_prefix, subsequence_of_kind_debug, offset))
+            .expected_it(format!(
+                "{} <{:?}> within a margin of <{:?}>",
+                expected_it_prefix, subsequence_of_kind_debug, offset
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -443,9 +532,13 @@ where
     assert_that
 }
 
-fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, O, F>(assert_that: AssertThat<C>,
-    subsequence_of_kind: I, offset: O, find_subsequence_of_kind: F, expected_it_prefix: &str)
-    -> AssertThat<C>
+fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, O, F>(
+    assert_that: AssertThat<C>,
+    subsequence_of_kind: I,
+    offset: O,
+    find_subsequence_of_kind: F,
+    expected_it_prefix: &str,
+) -> AssertThat<C>
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff + Debug,
@@ -453,23 +546,28 @@ where
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
     O: Borrow<<C::Item as AbsDiff>::ReturnType>,
-    F: FnOnce(&C, &[&C::Item], &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>
+    F: FnOnce(&C, &[&C::Item], &<C::Item as AbsDiff>::ReturnType) -> Option<Vec<Range<usize>>>,
 {
     let subsequence_of_kind_vec_unborrowed = subsequence_of_kind.into_iter().collect::<Vec<_>>();
     let subsequence_of_kind_vec: Vec<&C::Item> = borrow_all(&subsequence_of_kind_vec_unborrowed);
     let offset = offset.borrow();
 
     if let Some(first_occurrence_ranges) =
-            find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec, offset) {
-        let subsequence_of_kind_debug = CollectionDebug { collection: &subsequence_of_kind_vec };
+        find_subsequence_of_kind(&assert_that.data, &subsequence_of_kind_vec, offset)
+    {
+        let subsequence_of_kind_debug = CollectionDebug {
+            collection: &subsequence_of_kind_vec,
+        };
         let collection_debug = HighlightedCollectionDebug {
             collection: &assert_that.data,
-            highlighted_sections: first_occurrence_ranges
+            highlighted_sections: first_occurrence_ranges,
         };
 
         Failure::new(&assert_that)
-            .expected_it(format!("{} <{:?}> within a margin of <{:?}>",
-                expected_it_prefix, subsequence_of_kind_debug, offset))
+            .expected_it(format!(
+                "{} <{:?}> within a margin of <{:?}>",
+                expected_it_prefix, subsequence_of_kind_debug, offset
+            ))
             .but_it(format!("was <{:?}>", collection_debug))
             .fail();
     }
@@ -481,108 +579,155 @@ impl<'collection, C> OrderedCollectionAbsDiffAssertions<'collection, C> for Asse
 where
     C: OrderedCollection<'collection>,
     C::Item: AbsDiff + Debug,
-    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd
+    <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {
     fn contains_contiguous_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_contains_subsequence_kind(self, subsequence, offset,
-            find_contiguous_subsequence_close_to, "to contain the contiguous subsequence")
+        assert_contains_subsequence_kind(
+            self,
+            subsequence,
+            offset,
+            find_contiguous_subsequence_close_to,
+            "to contain the contiguous subsequence",
+        )
     }
 
-    fn does_not_contain_contiguous_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O)
-        -> Self
+    fn does_not_contain_contiguous_subsequence_close_to<E, I, O>(
+        self,
+        subsequence: I,
+        offset: O,
+    ) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_does_not_contain_subsequence_kind(self, subsequence, offset,
-            find_contiguous_subsequence_close_to, "not to contain the contiguous subsequence")
+        assert_does_not_contain_subsequence_kind(
+            self,
+            subsequence,
+            offset,
+            find_contiguous_subsequence_close_to,
+            "not to contain the contiguous subsequence",
+        )
     }
 
     fn contains_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_contains_subsequence_kind(self, subsequence, offset,
-            find_subsequence_close_to, "to contain the subsequence")
+        assert_contains_subsequence_kind(
+            self,
+            subsequence,
+            offset,
+            find_subsequence_close_to,
+            "to contain the subsequence",
+        )
     }
 
     fn does_not_contain_subsequence_close_to<E, I, O>(self, subsequence: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_does_not_contain_subsequence_kind(self, subsequence, offset,
-            find_subsequence_close_to, "not to contain the subsequence")
+        assert_does_not_contain_subsequence_kind(
+            self,
+            subsequence,
+            offset,
+            find_subsequence_close_to,
+            "not to contain the subsequence",
+        )
     }
 
     fn starts_with_close_to<E, I, O>(self, prefix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_contains_subsequence_kind(self, prefix, offset,
-            find_prefix_close_to, "to start with the prefix")
+        assert_contains_subsequence_kind(
+            self,
+            prefix,
+            offset,
+            find_prefix_close_to,
+            "to start with the prefix",
+        )
     }
 
     fn does_not_start_with_close_to<E, I, O>(self, prefix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_does_not_contain_subsequence_kind(self, prefix, offset,
-            find_prefix_close_to, "not to start with the prefix")
+        assert_does_not_contain_subsequence_kind(
+            self,
+            prefix,
+            offset,
+            find_prefix_close_to,
+            "not to start with the prefix",
+        )
     }
 
     fn ends_with_close_to<E, I, O>(self, suffix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_contains_subsequence_kind(self, suffix, offset,
-            find_suffix_close_to, "to end with the suffix")
+        assert_contains_subsequence_kind(
+            self,
+            suffix,
+            offset,
+            find_suffix_close_to,
+            "to end with the suffix",
+        )
     }
 
     fn does_not_end_with_close_to<E, I, O>(self, suffix: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
-        assert_does_not_contain_subsequence_kind(self, suffix, offset,
-            find_suffix_close_to, "not to end with the suffix")
+        assert_does_not_contain_subsequence_kind(
+            self,
+            suffix,
+            offset,
+            find_suffix_close_to,
+            "not to end with the suffix",
+        )
     }
 
     fn contains_exactly_in_given_order_close_to<E, I, O>(self, items: I, offset: O) -> Self
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>,
-        O: Borrow<<C::Item as AbsDiff>::ReturnType>
+        O: Borrow<<C::Item as AbsDiff>::ReturnType>,
     {
         let offset = offset.borrow();
         let expected_it_suffix = format!(" within a margin of <{:?}>", offset);
 
-        assert_contains_exactly_in_given_order_by(self, items,
-            |expected, actual| &actual.abs_diff(expected) <= offset, &expected_it_suffix)
+        assert_contains_exactly_in_given_order_by(
+            self,
+            items,
+            |expected, actual| &actual.abs_diff(expected) <= offset,
+            &expected_it_suffix,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{assert_that, assert_fails};
     use super::*;
+    use crate::{assert_fails, assert_that};
 
     #[test]
     fn contains_elements_close_to_passes_for_singleton_of_close_element() {
@@ -808,7 +953,8 @@ mod tests {
     }
 
     #[test]
-    fn does_not_contain_contiguous_subsequence_close_to_passes_for_singleton_not_contained_in_sequence() {
+    fn does_not_contain_contiguous_subsequence_close_to_passes_for_singleton_not_contained_in_sequence()
+     {
         assert_that!([1.2, 1.3, 1.7]).does_not_contain_contiguous_subsequence_close_to([1.5], 0.1);
     }
 
@@ -898,7 +1044,8 @@ mod tests {
 
     #[test]
     fn contains_subsequence_close_to_passes_for_approximate_contiguous_subsequence() {
-        assert_that!([1.414, 1.732, 2.000, 2.236]).contains_subsequence_close_to([1.73, 2.00], 0.01);
+        assert_that!([1.414, 1.732, 2.000, 2.236])
+            .contains_subsequence_close_to([1.73, 2.00], 0.01);
     }
 
     #[test]
@@ -1190,14 +1337,12 @@ mod tests {
 
     #[test]
     fn does_not_end_with_close_to_passes_for_value_just_below_range() {
-        assert_that!([1.414, 1.732, 2.000, 2.236])
-            .does_not_end_with_close_to([2.0, 2.24], 0.003);
+        assert_that!([1.414, 1.732, 2.000, 2.236]).does_not_end_with_close_to([2.0, 2.24], 0.003);
     }
 
     #[test]
     fn does_not_end_with_close_to_passes_for_value_just_above_range() {
-        assert_that!([1.414, 1.732, 2.000, 2.236])
-            .does_not_end_with_close_to([2.0, 2.23], 0.005);
+        assert_that!([1.414, 1.732, 2.000, 2.236]).does_not_end_with_close_to([2.0, 2.23], 0.005);
     }
 
     #[test]
