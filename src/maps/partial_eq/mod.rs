@@ -33,7 +33,7 @@ pub mod hash;
 ///     .contains_value(100)
 ///     .contains_entry("world", 200);
 /// ```
-pub trait MapPartialEqAssertions<'map, M: Map<'map>> {
+pub trait MapPartialEqAssertions<M: Map> {
     /// Asserts that the tested map contains an entry with a value equal to the given `value`
     /// according to [PartialEq], mapped to any key.
     fn contains_value<V: Borrow<M::Value>>(self, value: V) -> Self;
@@ -123,29 +123,28 @@ pub trait MapPartialEqAssertions<'map, M: Map<'map>> {
         I: IntoIterator<Item = (K, V)>;
 }
 
-fn get_key<'map, 'reference, M>(map: &'reference M, value: &M::Value) -> Option<&'reference M::Key>
+fn get_key<'reference, M>(map: &'reference M, value: &M::Value) -> Option<&'reference M::Key>
 where
-    M: Map<'map>,
+    M: Map,
     M::Value: PartialEq,
-    'map: 'reference,
 {
     map.entries()
         .find(|&(_, map_value)| map_value == value)
         .map(|(key, _)| key)
 }
 
-fn check_violating_key_for_entries_check<'map, M>(
+fn check_violating_key_for_entries_check<M>(
     assert_that: &AssertThat<M>,
     violating_key: Option<&M::Key>,
     entries: &[(&M::Key, &M::Value)],
     expected_it_prefix: &str,
 ) where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
     if let Some(violating_key) = violating_key {
-        let map_entries_debug = MapEntriesDebug::<'_, '_, M>::new(entries.iter().cloned());
+        let map_entries_debug = MapEntriesDebug::<'_, M>::new(entries.iter().cloned());
         let failure = Failure::new(assert_that)
             .expected_it(format!("{} <{:?}>", expected_it_prefix, map_entries_debug));
 
@@ -174,12 +173,12 @@ fn check_violating_key_for_entries_check<'map, M>(
     }
 }
 
-fn check_contains_values<'map, 'value, M, I, MS>(
+fn check_contains_values<'value, M, I, MS>(
     assert_that: &AssertThat<M>,
     actual_values: I,
     expected_values: &'value [&M::Value],
 ) where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug + 'value,
     I: Iterator<Item = &'value M::Value>,
@@ -206,12 +205,12 @@ fn check_contains_values<'map, 'value, M, I, MS>(
     }
 }
 
-fn check_contains_exactly_values<'map, 'value, M, I, MS>(
+fn check_contains_exactly_values<'value, M, I, MS>(
     assert_that: &AssertThat<M>,
     actual_values: I,
     expected_values: &'value [&M::Value],
 ) where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug + 'value,
     I: Iterator<Item = &'value M::Value>,
@@ -239,9 +238,9 @@ fn check_contains_exactly_values<'map, 'value, M, I, MS>(
     }
 }
 
-impl<'map, M> MapPartialEqAssertions<'map, M> for AssertThat<M>
+impl<M> MapPartialEqAssertions<M> for AssertThat<M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug + PartialEq,
 {
@@ -506,7 +505,7 @@ where
         });
 
         if let Some(superfluous_key) = superfluous_key {
-            let map_entries_debug = MapEntriesDebug::<'_, '_, M>::new(entries.iter().cloned());
+            let map_entries_debug = MapEntriesDebug::<'_, M>::new(entries.iter().cloned());
             let highlighted_map_debug = HighlightedMapDebug {
                 map: &self.data,
                 highlighted_key: superfluous_key,

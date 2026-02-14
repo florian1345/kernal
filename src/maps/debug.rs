@@ -4,13 +4,13 @@ use std::fmt::{Debug, Formatter};
 use crate::collections::{CollectionDebug, HighlightedCollectionDebug};
 use crate::maps::Map;
 
-struct MapEntryDebug<'reference, 'map, M: Map<'map>> {
+struct MapEntryDebug<'reference, M: Map> {
     entry: (&'reference M::Key, &'reference M::Value),
 }
 
-impl<'map, M> Debug for MapEntryDebug<'_, 'map, M>
+impl<M> Debug for MapEntryDebug<'_, M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
@@ -19,12 +19,12 @@ where
     }
 }
 
-pub(crate) struct MapEntriesDebug<'reference, 'map, M: Map<'map>> {
-    map_entries_debug: Vec<MapEntryDebug<'reference, 'map, M>>,
+pub(crate) struct MapEntriesDebug<'reference, M: Map> {
+    map_entries_debug: Vec<MapEntryDebug<'reference, M>>,
 }
 
-impl<'reference, 'map, M: Map<'map>> MapEntriesDebug<'reference, 'map, M> {
-    pub(crate) fn new<I>(entries: I) -> MapEntriesDebug<'reference, 'map, M>
+impl<'reference, M: Map> MapEntriesDebug<'reference, M> {
+    pub(crate) fn new<I>(entries: I) -> MapEntriesDebug<'reference, M>
     where
         I: Iterator<Item = (&'reference M::Key, &'reference M::Value)>,
     {
@@ -36,9 +36,9 @@ impl<'reference, 'map, M: Map<'map>> MapEntriesDebug<'reference, 'map, M> {
     }
 }
 
-impl<'map, M> Debug for MapEntriesDebug<'_, 'map, M>
+impl<M> Debug for MapEntriesDebug<'_, M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
@@ -57,34 +57,28 @@ pub(crate) struct MapDebug<'wrapper, M> {
     pub(crate) map: &'wrapper M,
 }
 
-impl<'map, M> Debug for MapDebug<'_, M>
+impl<M> Debug for MapDebug<'_, M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:?}",
-            MapEntriesDebug::<'_, '_, M>::new(self.map.entries())
-        )
+        write!(f, "{:?}", MapEntriesDebug::<'_, M>::new(self.map.entries()))
     }
 }
 
-pub(crate) struct HighlightedMapDebug<'wrapper, 'key, 'map, M>
+pub(crate) struct HighlightedMapDebug<'wrapper, 'key, M>
 where
-    M: Map<'map>,
-    'map: 'key,
+    M: Map,
 {
     pub(crate) map: &'wrapper M,
     pub(crate) highlighted_key: &'key M::Key,
 }
 
-impl<'key, 'map, M> Debug for HighlightedMapDebug<'_, 'key, 'map, M>
+impl<'key, M> Debug for HighlightedMapDebug<'_, 'key, M>
 where
-    M: Map<'map>,
-    'map: 'key,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
