@@ -1310,7 +1310,7 @@ mod tests {
     fn to_bytes_works_for_empty_string() {
         let bytes = assert_that!("").to_bytes().data;
 
-        assert_eq!(bytes, vec![]);
+        assert_eq!(bytes, Vec::<u8>::new());
     }
 
     #[test]

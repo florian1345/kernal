@@ -17,20 +17,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Tests
-      run: cargo test --verbose
-    - name: Clippy
-      run: |
-        rustup component add clippy
-        cargo clippy --verbose
-    - name: Rustfmt
-      run: |
-        rustup +nightly component add rustfmt
-        cargo +nightly fmt --all -- --check
-    - name: Check benches
-      run: cargo check --benches
-    - name: Documentation
-      run: cargo doc --verbose
+      - uses: actions/checkout@v3
+      - name: Build
+        # Check building succeeds without features as well as with all features
+        run: |
+          cargo build --verbose
+          cargo build --all-features --verbose
+      - name: Tests
+        run: cargo test --all-features --verbose
+      - name: Clippy
+        run: |
+          rustup component add clippy
+          cargo clippy --all-features --verbose
+      - name: Rustfmt
+        run: |
+          rustup +nightly component add rustfmt
+          cargo +nightly fmt --all -- --check
+      - name: Check benches
+        run: cargo check --benches
+      - name: Documentation
+        run: cargo doc --all-features --verbose

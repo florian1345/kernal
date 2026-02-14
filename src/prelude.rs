@@ -22,6 +22,8 @@ pub use crate::collections::partial_ord::{
     OrderedCollectionPartialOrdAssertions,
 };
 pub use crate::error::ErrorAssertions;
+#[cfg(feature = "json")]
+pub use crate::json::JsonAssertions;
 pub use crate::lock::{LockAssertions, MutexAssertions, RwLockAssertions};
 pub use crate::maps::MapAssertions;
 pub use crate::maps::partial_eq::MapPartialEqAssertions;
