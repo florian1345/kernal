@@ -301,7 +301,7 @@ pub struct MapKeys<'map, M: Map<'map>> {
     map: M,
 }
 
-impl<'map, M: Map<'map>> Collection<'map> for MapKeys<'map, M> {
+impl<'map, M: Map<'map>> Collection for MapKeys<'map, M> {
     type Item = M::Key;
 
     type Iter<'iter>
@@ -310,10 +310,7 @@ impl<'map, M: Map<'map>> Collection<'map> for MapKeys<'map, M> {
         Self: 'iter,
         'map: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.map.keys()
     }
 }
@@ -325,7 +322,7 @@ pub struct MapValues<'map, M: Map<'map>> {
     map: M,
 }
 
-impl<'map, M: Map<'map>> Collection<'map> for MapValues<'map, M> {
+impl<'map, M: Map<'map>> Collection for MapValues<'map, M> {
     type Item = M::Value;
 
     type Iter<'iter>
@@ -334,10 +331,7 @@ impl<'map, M: Map<'map>> Collection<'map> for MapValues<'map, M> {
         Self: 'iter,
         'map: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.map.values()
     }
 }
@@ -348,7 +342,7 @@ pub struct MapEntries<'wrapper, 'map, M: Map<'map>> {
     entries: Vec<(&'wrapper M::Key, &'wrapper M::Value)>,
 }
 
-impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper, 'map, M> {
+impl<'wrapper, 'map, M: Map<'map>> Collection for MapEntries<'wrapper, 'map, M> {
     type Item = (&'wrapper M::Key, &'wrapper M::Value);
 
     type Iter<'iter>
@@ -357,10 +351,7 @@ impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper,
         Self: 'iter,
         'wrapper: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'wrapper: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.entries.iter()
     }
 }

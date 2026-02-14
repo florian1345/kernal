@@ -33,15 +33,14 @@ pub mod partial_ord;
 ///
 /// This trait is required to allow collection-based assertions. It is implemented on all common
 /// collection types in the standard library and references thereof.
-pub trait Collection<'collection> {
+pub trait Collection {
     /// The type of the items/elements contained in this collection.
     type Item;
 
     /// The type of the iterators which can iterate over references of this collection's items.
     type Iter<'iter>: Iterator<Item = &'iter Self::Item>
     where
-        Self: 'iter,
-        'collection: 'iter;
+        Self: 'iter;
 
     /// Indicates whether this collection is empty, i.e. it has the length 0 according to
     /// [Collection::len].
@@ -58,47 +57,39 @@ pub trait Collection<'collection> {
     /// Returns a new iterator over the items in this collection. If the collection is ordered, the
     /// iterator returns the items in the ordering defined by the collection, otherwise the ordering
     /// is not specified.
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'collection: 'reference;
+    fn iterator(&self) -> Self::Iter<'_>;
 }
 
-impl<'collection, T: 'collection, const LEN: usize> Collection<'collection> for [T; LEN] {
+impl<T, const LEN: usize> Collection for [T; LEN] {
     type Item = T;
     type Iter<'iter>
         = SliceIter<'iter, T>
     where
-        'collection: 'iter;
+        T: 'iter;
 
     fn len(&self) -> usize {
         LEN
     }
 
-    fn iterator<'reference>(&'reference self) -> SliceIter<'reference, T>
-    where
-        'collection: 'reference,
-    {
+    fn iterator(&self) -> SliceIter<'_, T> {
         self.iter()
     }
 }
 
 macro_rules! impl_collection {
     ($collection_type:ty, $iterator_type:ident) => {
-        impl<'collection, T: 'collection> Collection<'collection> for $collection_type {
+        impl<T> Collection for $collection_type {
             type Item = T;
             type Iter<'iter>
                 = $iterator_type<'iter, T>
             where
-                'collection: 'iter;
+                T: 'iter;
 
             fn len(&self) -> usize {
                 <$collection_type>::len(self)
             }
 
-            fn iterator<'reference>(&'reference self) -> $iterator_type<'reference, T>
-            where
-                'collection: 'reference,
-            {
+            fn iterator(&self) -> $iterator_type<'_, T> {
                 self.iter()
             }
         }
@@ -113,71 +104,62 @@ impl_collection!(BinaryHeap<T>, BinaryHeapIter);
 impl_collection!(HashSet<T>, HashSetIter);
 impl_collection!(BTreeSet<T>, BTreeSetIter);
 
-impl<'collection, T> Collection<'collection> for &T
+impl<T> Collection for &T
 where
-    T: Collection<'collection> + ?Sized,
+    T: Collection + ?Sized,
 {
     type Item = T::Item;
     type Iter<'iter>
         = T::Iter<'iter>
     where
         Self: 'iter,
-        'collection: 'iter;
+        T: 'iter;
 
     fn len(&self) -> usize {
         (**self).len()
     }
 
-    fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
-    where
-        'collection: 'reference,
-    {
+    fn iterator(&self) -> T::Iter<'_> {
         (**self).iterator()
     }
 }
 
-impl<'collection, T> Collection<'collection> for &mut T
+impl<T> Collection for &mut T
 where
-    T: Collection<'collection> + ?Sized,
+    T: Collection + ?Sized,
 {
     type Item = T::Item;
     type Iter<'iter>
         = T::Iter<'iter>
     where
         Self: 'iter,
-        'collection: 'iter;
+        T: 'iter;
 
     fn len(&self) -> usize {
         (**self).len()
     }
 
-    fn iterator<'reference>(&'reference self) -> T::Iter<'reference>
-    where
-        'collection: 'reference,
-    {
+    fn iterator(&self) -> T::Iter<'_> {
         (**self).iterator()
     }
 }
 
-impl<'collection, T> Collection<'collection> for Box<T>
+impl<T> Collection for Box<T>
 where
-    T: Collection<'collection> + ?Sized,
+    T: Collection + ?Sized,
 {
     type Item = T::Item;
     type Iter<'iter>
         = T::Iter<'iter>
     where
         Self: 'iter,
-        'collection: 'iter;
+        T: 'iter;
 
     fn len(&self) -> usize {
         (**self).len()
     }
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'collection: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.as_ref().iterator()
     }
 }
@@ -194,9 +176,9 @@ pub(crate) struct CollectionDebug<'wrapper, C> {
     pub(crate) collection: &'wrapper C,
 }
 
-impl<'collection, C> Debug for CollectionDebug<'_, C>
+impl<C> Debug for CollectionDebug<'_, C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -268,9 +250,9 @@ fn close_section_after_item_if_applicable(
     Ok(false)
 }
 
-impl<'collection, C> Debug for HighlightedCollectionDebug<C>
+impl<C> Debug for HighlightedCollectionDebug<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -325,9 +307,9 @@ where
 ///     .has_length_less_than(10)
 ///     .contains_only_elements_matching(String::is_empty);
 /// ```
-pub trait CollectionAssertions<'collection, C>
+pub trait CollectionAssertions<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
 {
     /// Asserts that the tested collection is empty, i.e. contains no elements.
     fn is_empty(self) -> Self;
@@ -373,14 +355,14 @@ where
     fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self;
 }
 
-fn assert_length_predicate<'collection, C, F>(
+fn assert_length_predicate<C, F>(
     assert_that: AssertThat<C>,
     length_predicate: F,
     reference_len: usize,
     expected_it_prefix: &str,
 ) -> AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug,
     F: Fn(usize) -> bool,
 {
@@ -403,13 +385,13 @@ where
     assert_that
 }
 
-fn assert_all_match_predicate<'collection, C, F>(
+fn assert_all_match_predicate<C, F>(
     assert_that: AssertThat<C>,
     mut item_predicate: F,
     expected_it: &str,
 ) -> AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug,
     F: FnMut(&C::Item) -> bool,
 {
@@ -439,14 +421,14 @@ where
 /// the item at position X in `items` (`expected`) satisfy `comparator(expected, actual)`. If a
 /// violation is found, a failure is produced with an `expected_it` of `"to contain exactly in the
 /// given order {items}"` suffixed with the given `expected_it_suffix`.
-fn assert_contains_exactly_in_given_order_by<'collection, C, E, I, F>(
+fn assert_contains_exactly_in_given_order_by<C, E, I, F>(
     assert_that: AssertThat<C>,
     items: I,
     comparator: F,
     expected_it_suffix: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
@@ -490,9 +472,9 @@ where
     assert_that
 }
 
-impl<'collection, C> CollectionAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug,
 {
     fn is_empty(self) -> Self {
@@ -612,13 +594,13 @@ where
     }
 }
 
-fn find_contiguous_subsequence_by<'collection, C, F>(
+fn find_contiguous_subsequence_by<C, F>(
     collection: &C,
     subsequence: &[&C::Item],
     mut matches: F,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     F: FnMut(&C::Item, &C::Item) -> bool,
 {
     let collection_vec = collection.iterator().collect::<Vec<_>>();
@@ -643,13 +625,13 @@ where
     None
 }
 
-fn find_subsequence_by<'collection, C, F>(
+fn find_subsequence_by<C, F>(
     collection: &C,
     subsequence: &[&C::Item],
     mut matches: F,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if subsequence.is_empty() {
@@ -688,13 +670,13 @@ where
     }
 }
 
-fn find_prefix_by<'collection, C, F>(
+fn find_prefix_by<C, F>(
     collection: &C,
     prefix: &[&C::Item],
     mut matches: F,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if collection.len() < prefix.len() {
@@ -714,13 +696,13 @@ where
     }
 }
 
-fn find_suffix_by<'collection, C, F>(
+fn find_suffix_by<C, F>(
     collection: &C,
     suffix: &[&C::Item],
     mut matches: F,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     F: FnMut(&C::Item, &C::Item) -> bool,
 {
     if collection.len() < suffix.len() {
@@ -751,18 +733,14 @@ mod tests {
 
     struct MockCollection(Vec<u32>);
 
-    impl<'collection> Collection<'collection> for MockCollection {
+    impl Collection for MockCollection {
         type Item = u32;
         type Iter<'iter>
             = Iter<'iter, u32>
         where
-            Self: 'iter,
-            'collection: 'iter;
+            Self: 'iter;
 
-        fn iterator<'reference>(&'reference self) -> Iter<'reference, u32>
-        where
-            'collection: 'reference,
-        {
+        fn iterator(&self) -> Iter<'_, u32> {
             self.0.iter()
         }
     }

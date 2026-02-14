@@ -22,7 +22,7 @@ use crate::{AssertThat, Failure};
 ///     .contains_items_less_than(4)
 ///     .contains_only_items_greater_than_or_equal_to(1);
 /// ```
-pub trait CollectionPartialOrdAssertions<'collection, C: Collection<'collection>> {
+pub trait CollectionPartialOrdAssertions<C: Collection> {
     /// Asserts that the tested collection contains at least one element that is less than the given
     /// `bound` according to [PartialOrd]. In particular, this always fails for empty collections.
     fn contains_items_less_than<E: Borrow<C::Item>>(self, bound: E) -> Self;
@@ -61,14 +61,14 @@ pub trait CollectionPartialOrdAssertions<'collection, C: Collection<'collection>
     fn contains_only_items_greater_than_or_equal_to<E: Borrow<C::Item>>(self, bound: E) -> Self;
 }
 
-fn assert_contains_items_matching_bound<'collection, C, E, F>(
+fn assert_contains_items_matching_bound<C, E, F>(
     assert_that: AssertThat<C>,
     bound: E,
     mut operation: F,
     operation_name: &str,
 ) -> AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + PartialOrd,
     E: Borrow<C::Item>,
     F: FnMut(&C::Item, &C::Item) -> bool,
@@ -97,14 +97,14 @@ where
     assert_that
 }
 
-fn assert_contains_only_items_matching_bound<'collection, C, E, F>(
+fn assert_contains_only_items_matching_bound<C, E, F>(
     assert_that: AssertThat<C>,
     bound: E,
     mut operation: F,
     operation_name: &str,
 ) -> AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + PartialOrd,
     E: Borrow<C::Item>,
     F: FnMut(&C::Item, &C::Item) -> bool,
@@ -135,9 +135,9 @@ where
     assert_that
 }
 
-impl<'collection, C> CollectionPartialOrdAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionPartialOrdAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + PartialOrd,
 {
     fn contains_items_less_than<E: Borrow<C::Item>>(self, bound: E) -> Self {
@@ -242,12 +242,12 @@ pub trait OrderedCollectionPartialOrdAssertions {
     fn is_sorted_in_strictly_descending_order(self) -> Self;
 }
 
-fn find_sorting_counter_example_index<'collection, C, F>(
+fn find_sorting_counter_example_index<C, F>(
     collection: &C,
     are_correctly_ordered: F,
 ) -> Option<usize>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     F: Fn(&C::Item, &C::Item) -> bool,
 {
     collection
@@ -258,13 +258,13 @@ where
         .map(|(index, _)| index)
 }
 
-fn assert_is_sorted<'collection, C, F>(
+fn assert_is_sorted<C, F>(
     assert_that: AssertThat<C>,
     are_correctly_ordered: F,
     sorting_name: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug,
     F: Fn(&C::Item, &C::Item) -> bool,
 {
@@ -286,9 +286,9 @@ where
     assert_that
 }
 
-impl<'collection, C> OrderedCollectionPartialOrdAssertions for AssertThat<C>
+impl<C> OrderedCollectionPartialOrdAssertions for AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialOrd,
 {
     fn is_sorted_in_ascending_order(self) -> Self {

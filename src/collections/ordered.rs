@@ -10,34 +10,25 @@ use crate::{AssertThat, Failure};
 /// A marker trait for ordered [Collection]s whose item ordering is deliberate, specified by the
 /// iteration order of [Collection::iterator]. It is implemented for all ordered collection types of
 /// the standard library.
-pub trait OrderedCollection<'collection>: Collection<'collection> {}
+pub trait OrderedCollection: Collection {}
 
-impl<'collection, T: 'collection> OrderedCollection<'collection> for [T] {}
+impl<T> OrderedCollection for [T] {}
 
-impl<'collection, T: 'collection, const N: usize> OrderedCollection<'collection> for [T; N] {}
+impl<T, const N: usize> OrderedCollection for [T; N] {}
 
-impl<'collection, T: 'collection> OrderedCollection<'collection> for Vec<T> {}
+impl<T> OrderedCollection for Vec<T> {}
 
-impl<'collection, T: 'collection> OrderedCollection<'collection> for VecDeque<T> {}
+impl<T> OrderedCollection for VecDeque<T> {}
 
-impl<'collection, T: 'collection> OrderedCollection<'collection> for LinkedList<T> {}
+impl<T> OrderedCollection for LinkedList<T> {}
 
-impl<'collection, T: 'collection> OrderedCollection<'collection> for BTreeSet<T> {}
+impl<T> OrderedCollection for BTreeSet<T> {}
 
-impl<'collection, C> OrderedCollection<'collection> for &C where
-    C: OrderedCollection<'collection> + ?Sized
-{
-}
+impl<C> OrderedCollection for &C where C: OrderedCollection + ?Sized {}
 
-impl<'collection, C> OrderedCollection<'collection> for &mut C where
-    C: OrderedCollection<'collection> + ?Sized
-{
-}
+impl<C> OrderedCollection for &mut C where C: OrderedCollection + ?Sized {}
 
-impl<'collection, C> OrderedCollection<'collection> for Box<C> where
-    C: OrderedCollection<'collection> + ?Sized
-{
-}
+impl<C> OrderedCollection for Box<C> where C: OrderedCollection + ?Sized {}
 
 /// An extension trait to be used on the output of [assert_that](crate::assert_that) with an
 /// argument that implements the [OrderedCollection] trait. The [Collection::Item] type must
@@ -54,9 +45,9 @@ impl<'collection, C> OrderedCollection<'collection> for Box<C> where
 ///         |&it| assert_that!(it).is_even(),
 ///         |&it| assert_that!(it).is_greater_than(2)));
 /// ```
-pub trait OrderedCollectionAssertions<'collection, C>
+pub trait OrderedCollectionAssertions<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
 {
     /// Asserts that each item in the tested collection satisfies the assertion at the corresponding
     /// position in the given `assertions` slice, that is, the assertion runs without panicking. The
@@ -69,9 +60,9 @@ where
     fn satisfies_exactly_in_given_order(self, assertions: &[Box<dyn Fn(&C::Item)>]) -> Self;
 }
 
-impl<'collection, C> OrderedCollectionAssertions<'collection, C> for AssertThat<C>
+impl<C> OrderedCollectionAssertions<C> for AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug,
 {
     fn satisfies_exactly_in_given_order(self, assertions: &[Box<dyn Fn(&C::Item)>]) -> Self {

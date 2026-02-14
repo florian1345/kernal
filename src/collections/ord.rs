@@ -18,7 +18,7 @@ use crate::{AssertThat, Failure};
 ///
 /// assert_that!([3, 1, 4, 1]).has_maximum(4).does_not_have_minimum(0);
 /// ```
-pub trait CollectionOrdAssertions<'collection, C: Collection<'collection>> {
+pub trait CollectionOrdAssertions<C: Collection> {
     /// Asserts that the tested collection contains an item equal to `max` according to [PartialEq]
     /// and that all other items are less than or equal to that value according to [Ord].
     fn has_maximum<M: Borrow<C::Item>>(self, max: M) -> Self;
@@ -36,13 +36,13 @@ pub trait CollectionOrdAssertions<'collection, C: Collection<'collection>> {
     fn does_not_have_minimum<M: Borrow<C::Item>>(self, min: M) -> Self;
 }
 
-fn verify_has_extreme<'collection, C, M>(
+fn verify_has_extreme<C, M>(
     assert_that: &AssertThat<C>,
     expected_extreme: M,
     actual_extreme: Option<&C::Item>,
     extreme_name: &str,
 ) where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + Ord,
     M: Borrow<C::Item>,
 {
@@ -70,13 +70,13 @@ fn verify_has_extreme<'collection, C, M>(
     }
 }
 
-fn verify_does_not_have_extreme<'collection, C, M>(
+fn verify_does_not_have_extreme<C, M>(
     assert_that: &AssertThat<C>,
     unexpected_extreme: M,
     actual_extreme: Option<&C::Item>,
     extreme_name: &str,
 ) where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + Ord,
     M: Borrow<C::Item>,
 {
@@ -107,9 +107,9 @@ fn verify_does_not_have_extreme<'collection, C, M>(
     }
 }
 
-impl<'collection, C> CollectionOrdAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionOrdAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + Ord,
 {
     fn has_maximum<M: Borrow<C::Item>>(self, max: M) -> Self {
