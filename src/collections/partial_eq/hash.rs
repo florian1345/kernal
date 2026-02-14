@@ -32,9 +32,9 @@ use crate::util::multiset::hash::HashMultiset;
 ///     .contains_exactly_in_any_order_using_hash([3, 7, 2, 11, 5])
 ///     .contains_none_of_using_hash([4, 6, 8, 10, 12]);
 /// ```
-pub trait CollectionEqHashAssertions<'collection, C>
+pub trait CollectionEqHashAssertions<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
 {
     /// Asserts that for each of the given `items`, the tested collection contains an equal element
     /// according to [Eq] and [Hash]. If the provided iterator contains multiple equal elements,
@@ -72,9 +72,9 @@ where
         I: IntoIterator<Item = E>;
 }
 
-impl<'collection, C> CollectionEqHashAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionEqHashAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + Eq + Hash,
 {
     fn contains_all_of_using_hash<E, I>(self, items: I) -> Self

@@ -16,7 +16,6 @@ use std::collections::hash_map::{
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::marker::PhantomData;
 use std::slice::Iter as SliceIter;
 
 use crate::collections::{Collection, CollectionDebug};
@@ -37,7 +36,7 @@ mod debug;
 ///
 /// This trait is required to allow map-based assertions. It is implemented on all common map types
 /// in the standard library and references thereof.
-pub trait Map<'map> {
+pub trait Map {
     /// The type of keys used for lookup in this map type to obtain values.
     type Key;
 
@@ -48,40 +47,31 @@ pub trait Map<'map> {
     /// order is not specified.
     type KeyIter<'iter>: Iterator<Item = &'iter Self::Key>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     /// The type of iterators which can iterate over references of the values of a map. Iteration
     /// order is not specified.
     type ValueIter<'iter>: Iterator<Item = &'iter Self::Value>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     /// The type of iterators which can iterate over entries of a map, i.e. pairs of key- and
     /// value-references. Iteration order is not specified.
     type EntryIter<'iter>: Iterator<Item = (&'iter Self::Key, &'iter Self::Value)>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     /// Returns an iterator over references of the keys of this map. Iteration order is not
     /// specified.
-    fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
-    where
-        'map: 'reference;
+    fn keys(&self) -> Self::KeyIter<'_>;
 
     /// Returns an iterator over references of the values of this map. Iteration order is not
     /// specified.
-    fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
-    where
-        'map: 'reference;
+    fn values(&self) -> Self::ValueIter<'_>;
 
     /// Returns an iterator over references of the entries of this map, i.e. pairs of key- and
     /// value-references. Iteration order is not specified.
-    fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
-    where
-        'map: 'reference;
+    fn entries(&self) -> Self::EntryIter<'_>;
 
     /// Gets a reference to the value associated with the given `key` in a `Some` variant, if a
     /// mapping exists. Otherwise, if this map has no value associated with the key, `None` is
@@ -106,10 +96,9 @@ pub trait Map<'map> {
     fn are_keys_equal(key_1: &Self::Key, key_2: &Self::Key) -> bool;
 }
 
-impl<'map, K, V> Map<'map> for HashMap<K, V>
+impl<K, V> Map for HashMap<K, V>
 where
-    K: Eq + Hash + 'map,
-    V: 'map,
+    K: Eq + Hash,
 {
     type Key = K;
     type Value = V;
@@ -117,39 +106,27 @@ where
     type KeyIter<'iter>
         = HashMapKeyIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     type ValueIter<'iter>
         = HashMapValueIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     type EntryIter<'iter>
         = HashMapEntryIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
-    fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn keys(&self) -> Self::KeyIter<'_> {
         HashMap::keys(self)
     }
 
-    fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn values(&self) -> Self::ValueIter<'_> {
         HashMap::values(self)
     }
 
-    fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn entries(&self) -> Self::EntryIter<'_> {
         HashMap::iter(self)
     }
 
@@ -166,10 +143,9 @@ where
     }
 }
 
-impl<'map, K, V> Map<'map> for BTreeMap<K, V>
+impl<K, V> Map for BTreeMap<K, V>
 where
-    K: Ord + 'map,
-    V: 'map,
+    K: Ord,
 {
     type Key = K;
     type Value = V;
@@ -177,39 +153,27 @@ where
     type KeyIter<'iter>
         = BTreeMapKeyIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     type ValueIter<'iter>
         = BTreeMapValueIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
     type EntryIter<'iter>
         = BTreeMapEntryIter<'iter, K, V>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
-    fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn keys(&self) -> Self::KeyIter<'_> {
         BTreeMap::keys(self)
     }
 
-    fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn values(&self) -> Self::ValueIter<'_> {
         BTreeMap::values(self)
     }
 
-    fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn entries(&self) -> Self::EntryIter<'_> {
         BTreeMap::iter(self)
     }
 
@@ -228,46 +192,34 @@ where
 
 macro_rules! impl_map_for_ref {
     ($ref_type:ty) => {
-        impl<'map, M: Map<'map>> Map<'map> for $ref_type {
+        impl<M: Map> Map for $ref_type {
             type Key = M::Key;
             type Value = M::Value;
 
             type KeyIter<'iter>
                 = M::KeyIter<'iter>
             where
-                Self: 'iter,
-                'map: 'iter;
+                Self: 'iter;
 
             type ValueIter<'iter>
                 = M::ValueIter<'iter>
             where
-                Self: 'iter,
-                'map: 'iter;
+                Self: 'iter;
 
             type EntryIter<'iter>
                 = M::EntryIter<'iter>
             where
-                Self: 'iter,
-                'map: 'iter;
+                Self: 'iter;
 
-            fn keys<'reference>(&'reference self) -> M::KeyIter<'reference>
-            where
-                'map: 'reference,
-            {
+            fn keys(&self) -> M::KeyIter<'_> {
                 (**self).keys()
             }
 
-            fn values<'reference>(&'reference self) -> M::ValueIter<'reference>
-            where
-                'map: 'reference,
-            {
+            fn values(&self) -> M::ValueIter<'_> {
                 (**self).values()
             }
 
-            fn entries<'reference>(&'reference self) -> M::EntryIter<'reference>
-            where
-                'map: 'reference,
-            {
+            fn entries(&self) -> M::EntryIter<'_> {
                 (**self).entries()
             }
 
@@ -296,71 +248,57 @@ impl_map_for_ref!(Box<M>);
 
 /// A [Collection] which contains the keys of a [Map]. That is, the [Collection::iterator] returns
 /// the same items as [Map::keys].
-pub struct MapKeys<'map, M: Map<'map>> {
-    _lifetime: PhantomData<&'map ()>,
+pub struct MapKeys<M: Map> {
     map: M,
 }
 
-impl<'map, M: Map<'map>> Collection<'map> for MapKeys<'map, M> {
+impl<M: Map> Collection for MapKeys<M> {
     type Item = M::Key;
 
     type Iter<'iter>
         = M::KeyIter<'iter>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.map.keys()
     }
 }
 
 /// A [Collection] which contains the values of a [Map]. That is, the [Collection::iterator] returns
 /// the same items as [Map::values].
-pub struct MapValues<'map, M: Map<'map>> {
-    _lifetime: PhantomData<&'map ()>,
+pub struct MapValues<M: Map> {
     map: M,
 }
 
-impl<'map, M: Map<'map>> Collection<'map> for MapValues<'map, M> {
+impl<M: Map> Collection for MapValues<M> {
     type Item = M::Value;
 
     type Iter<'iter>
         = M::ValueIter<'iter>
     where
-        Self: 'iter,
-        'map: 'iter;
+        Self: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'map: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.map.values()
     }
 }
 
 /// A [Collection] which contains the entries of a [Map]. The [Collection::iterator] returns
 /// _references_ to the [Map::entries], whose items are instantiated with the `'wrapper` lifetime.
-pub struct MapEntries<'wrapper, 'map, M: Map<'map>> {
+pub struct MapEntries<'wrapper, M: Map> {
     entries: Vec<(&'wrapper M::Key, &'wrapper M::Value)>,
 }
 
-impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper, 'map, M> {
+impl<'wrapper, M: Map> Collection for MapEntries<'wrapper, M> {
     type Item = (&'wrapper M::Key, &'wrapper M::Value);
 
     type Iter<'iter>
         = SliceIter<'iter, Self::Item>
     where
-        Self: 'iter,
-        'wrapper: 'iter;
+        Self: 'iter;
 
-    fn iterator<'reference>(&'reference self) -> Self::Iter<'reference>
-    where
-        'wrapper: 'reference,
-    {
+    fn iterator(&self) -> Self::Iter<'_> {
         self.entries.iter()
     }
 }
@@ -382,7 +320,7 @@ impl<'wrapper, 'map, M: Map<'map>> Collection<'wrapper> for MapEntries<'wrapper,
 /// assert_that!(&fruit_map).contains_keys(["apple", "banana"]).does_not_contain_key("cherry");
 /// assert_that!(fruit_map).to_keys().contains_exactly_in_any_order(["banana", "apple"]);
 /// ```
-pub trait MapAssertions<'map, M: Map<'map>> {
+pub trait MapAssertions<M: Map> {
     /// Asserts that the tested map is empty, i.e. contains no entries.
     fn is_empty(self) -> Self;
 
@@ -437,31 +375,29 @@ pub trait MapAssertions<'map, M: Map<'map>> {
 
     /// Converts the tested map into a [Collection] that contains its keys and allows assertions on
     /// it.
-    fn to_keys(self) -> AssertThat<MapKeys<'map, M>>;
+    fn to_keys(self) -> AssertThat<MapKeys<M>>;
 
     /// Converts the tested map into a [Collection] that contains its values and allows assertions
     /// on it.
-    fn to_values(self) -> AssertThat<MapValues<'map, M>>;
+    fn to_values(self) -> AssertThat<MapValues<M>>;
 
     /// Converts the tested map into a [Collection] that contains _references_ to its entries and
     /// allows assertions on it.
     ///
     /// Due to restrictions in the current type setup, this method requires a lifetime to be
-    /// associated with the returned entries. It is still intended and recommended  to be used in a
+    /// associated with the returned entries. It is still intended and recommended to be used in a
     /// call chain as all other assertions.
-    fn to_entries<'this>(&'this self) -> AssertThat<MapEntries<'this, 'map, M>>
-    where
-        'map: 'this;
+    fn to_entries(&self) -> AssertThat<MapEntries<'_, M>>;
 }
 
-fn assert_length_predicate<'map, M, F>(
+fn assert_length_predicate<M, F>(
     assert_that: AssertThat<M>,
     length_predicate: F,
     reference_len: usize,
     expected_it_prefix: &str,
 ) -> AssertThat<M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
     F: Fn(usize) -> bool,
@@ -482,9 +418,9 @@ where
     assert_that
 }
 
-impl<'map, M> MapAssertions<'map, M> for AssertThat<M>
+impl<M> MapAssertions<M> for AssertThat<M>
 where
-    M: Map<'map> + 'map,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug,
 {
@@ -695,32 +631,23 @@ where
         self
     }
 
-    fn to_keys(self) -> AssertThat<MapKeys<'map, M>> {
+    fn to_keys(self) -> AssertThat<MapKeys<M>> {
         AssertThat {
-            data: MapKeys {
-                _lifetime: PhantomData,
-                map: self.data,
-            },
+            data: MapKeys { map: self.data },
             expression: format!("keys of <{}>", self.expression),
         }
     }
 
-    fn to_values(self) -> AssertThat<MapValues<'map, M>> {
+    fn to_values(self) -> AssertThat<MapValues<M>> {
         AssertThat {
-            data: MapValues {
-                _lifetime: PhantomData,
-                map: self.data,
-            },
+            data: MapValues { map: self.data },
             expression: format!("values of <{}>", self.expression),
         }
     }
 
     // TODO find a solution that does not require a reference here
 
-    fn to_entries<'this>(&'this self) -> AssertThat<MapEntries<'this, 'map, M>>
-    where
-        'map: 'this,
-    {
+    fn to_entries(&self) -> AssertThat<MapEntries<'_, M>> {
         AssertThat {
             data: MapEntries {
                 entries: self.data.entries().collect::<Vec<_>>(),
@@ -743,43 +670,31 @@ mod tests {
         keys: Vec<i32>,
     }
 
-    impl<'map> Map<'map> for MockMap {
+    impl Map for MockMap {
         type Key = i32;
         type Value = i32;
         type KeyIter<'iter>
             = SliceIter<'iter, i32>
         where
-            Self: 'iter,
-            'map: 'iter;
+            Self: 'iter;
         type ValueIter<'iter>
             = Empty<&'iter i32>
         where
-            Self: 'iter,
-            'map: 'iter;
+            Self: 'iter;
         type EntryIter<'iter>
             = Empty<(&'iter i32, &'iter i32)>
         where
-            Self: 'iter,
-            'map: 'iter;
+            Self: 'iter;
 
-        fn keys<'reference>(&'reference self) -> Self::KeyIter<'reference>
-        where
-            'map: 'reference,
-        {
+        fn keys(&self) -> Self::KeyIter<'_> {
             self.keys.iter()
         }
 
-        fn values<'reference>(&'reference self) -> Self::ValueIter<'reference>
-        where
-            'map: 'reference,
-        {
+        fn values(&self) -> Self::ValueIter<'_> {
             panic!("mock map values not expected to be called")
         }
 
-        fn entries<'reference>(&'reference self) -> Self::EntryIter<'reference>
-        where
-            'map: 'reference,
-        {
+        fn entries(&self) -> Self::EntryIter<'_> {
             panic!("mock map entries not expected to be called")
         }
 

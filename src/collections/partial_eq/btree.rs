@@ -31,9 +31,9 @@ use crate::util::multiset::btree::BTreeMultiset;
 ///     .contains_exactly_in_any_order_using_ord([3, 7, 2, 11, 5])
 ///     .contains_none_of_using_ord([4, 6, 8, 10, 12]);
 /// ```
-pub trait CollectionEqOrdAssertions<'collection, C>
+pub trait CollectionEqOrdAssertions<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
 {
     /// Asserts that for each of the given `items`, the tested collection contains an equal element
     /// according to [Eq] and [Ord]. If the provided iterator contains multiple equal elements, this
@@ -71,9 +71,9 @@ where
         I: IntoIterator<Item = E>;
 }
 
-impl<'collection, C> CollectionEqOrdAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionEqOrdAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + Eq + Ord,
 {
     fn contains_all_of_using_ord<E, I>(self, items: I) -> Self

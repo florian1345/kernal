@@ -26,7 +26,7 @@ use crate::util::multiset::hash::HashMultiset;
 /// assert_that!(HashMap::from([("hello", 100), ("world", 200)]))
 ///     .contains_exactly_values_using_hash([200, 100]);
 /// ```
-pub trait MapEqHashAssertions<'map, M: Map<'map>> {
+pub trait MapEqHashAssertions<M: Map> {
     /// Asserts that for each of the given `values`, the tested map contains an entry with a value
     /// equal to it according to [Eq] and [Hash]. If the provided iterator contains multiple equal
     /// values, this function asserts that the tested map contains at least that number of equal
@@ -53,9 +53,9 @@ pub trait MapEqHashAssertions<'map, M: Map<'map>> {
         I: IntoIterator<Item = V>;
 }
 
-impl<'map, M> MapEqHashAssertions<'map, M> for AssertThat<M>
+impl<M> MapEqHashAssertions<M> for AssertThat<M>
 where
-    M: Map<'map>,
+    M: Map,
     M::Key: Debug,
     M::Value: Debug + Eq + Hash,
 {

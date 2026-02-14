@@ -21,14 +21,13 @@ use crate::collections::{
 use crate::util::borrow_all;
 use crate::{AssertThat, Failure};
 
-fn highlight_violating_index<'collection, 'reference, C, P>(
-    collection: &'reference C,
+fn highlight_violating_index<C, P>(
+    collection: &C,
     predicate: P,
-) -> Option<HighlightedCollectionDebug<Vec<&'reference C::Item>>>
+) -> Option<HighlightedCollectionDebug<Vec<&C::Item>>>
 where
-    C: Collection<'collection>,
+    C: Collection,
     P: Fn(&C::Item) -> bool,
-    'collection: 'reference,
 {
     let items: Vec<&C::Item> = collection.iterator().collect::<Vec<_>>();
 
@@ -58,9 +57,9 @@ where
 ///     .contains_items_close_to(0.9, 0.2)
 ///     .does_not_contain_items_close_to(5.0, 0.2);
 /// ```
-pub trait CollectionAbsDiffAssertions<'collection, C>
+pub trait CollectionAbsDiffAssertions<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: AbsDiff,
     <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {
@@ -183,9 +182,9 @@ where
     result
 }
 
-impl<'collection, C> CollectionAbsDiffAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionAbsDiffAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: AbsDiff + Debug,
     <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {
@@ -319,9 +318,9 @@ where
 ///     .contains_contiguous_subsequence_close_to([1.6, 1.9, 2.6], 0.2)
 ///     .does_not_end_with_close_to([2.0, 2.5], 0.1);
 /// ```
-pub trait OrderedCollectionAbsDiffAssertions<'collection, C>
+pub trait OrderedCollectionAbsDiffAssertions<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff,
 {
     /// Asserts that there is a contiguous subsequence in the tested collection in which each item
@@ -432,13 +431,13 @@ where
         O: Borrow<<C::Item as AbsDiff>::ReturnType>;
 }
 
-fn find_contiguous_subsequence_close_to<'collection, C>(
+fn find_contiguous_subsequence_close_to<C>(
     collection: &C,
     subsequence: &[&C::Item],
     offset: &<C::Item as AbsDiff>::ReturnType,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff,
     <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
@@ -447,13 +446,13 @@ where
     })
 }
 
-fn find_subsequence_close_to<'collection, C>(
+fn find_subsequence_close_to<C>(
     collection: &C,
     subsequence: &[&C::Item],
     offset: &<C::Item as AbsDiff>::ReturnType,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff,
     <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
@@ -462,13 +461,13 @@ where
     })
 }
 
-fn find_prefix_close_to<'collection, C>(
+fn find_prefix_close_to<C>(
     collection: &C,
     prefix: &[&C::Item],
     offset: &<C::Item as AbsDiff>::ReturnType,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff,
     <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
@@ -477,13 +476,13 @@ where
     })
 }
 
-fn find_suffix_close_to<'collection, C>(
+fn find_suffix_close_to<C>(
     collection: &C,
     suffix: &[&C::Item],
     offset: &<C::Item as AbsDiff>::ReturnType,
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff,
     <C::Item as AbsDiff>::ReturnType: PartialOrd,
 {
@@ -492,7 +491,7 @@ where
     })
 }
 
-fn assert_contains_subsequence_kind<'collection, C, E, I, O, F>(
+fn assert_contains_subsequence_kind<C, E, I, O, F>(
     assert_that: AssertThat<C>,
     subsequence_of_kind: I,
     offset: O,
@@ -500,7 +499,7 @@ fn assert_contains_subsequence_kind<'collection, C, E, I, O, F>(
     expected_it_prefix: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff + Debug,
     <C::Item as AbsDiff>::ReturnType: Debug,
     E: Borrow<C::Item>,
@@ -532,7 +531,7 @@ where
     assert_that
 }
 
-fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, O, F>(
+fn assert_does_not_contain_subsequence_kind<C, E, I, O, F>(
     assert_that: AssertThat<C>,
     subsequence_of_kind: I,
     offset: O,
@@ -540,7 +539,7 @@ fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, O, F>(
     expected_it_prefix: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff + Debug,
     <C::Item as AbsDiff>::ReturnType: Debug,
     E: Borrow<C::Item>,
@@ -575,9 +574,9 @@ where
     assert_that
 }
 
-impl<'collection, C> OrderedCollectionAbsDiffAssertions<'collection, C> for AssertThat<C>
+impl<C> OrderedCollectionAbsDiffAssertions<C> for AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: AbsDiff + Debug,
     <C::Item as AbsDiff>::ReturnType: Debug + PartialOrd,
 {

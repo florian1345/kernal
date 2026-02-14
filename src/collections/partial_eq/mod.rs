@@ -38,9 +38,9 @@ pub mod hash;
 /// assert_that!(&["hello", "world"]).contains("hello").contains_none_of(&["apple", "banana"]);
 /// assert_that!(&[1, 2, 3]).does_not_contain(4).contains_exactly_in_any_order(&[3, 2, 1]);
 /// ```
-pub trait CollectionPartialEqAssertions<'collection, C>
+pub trait CollectionPartialEqAssertions<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
 {
     /// Asserts that the tested collection contains at least one element which is equal to the given
     /// `item` according to [PartialEq].
@@ -129,12 +129,12 @@ where
     errors.join(" and ")
 }
 
-pub(crate) fn check_contains_all_of<'collection, 'item, C, I, M>(
+pub(crate) fn check_contains_all_of<'item, C, I, M>(
     assert_that: &AssertThat<C>,
     actual_items: I,
     expected_items: &'item [&C::Item],
 ) where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
     M: Multiset<&'item C::Item>,
@@ -160,12 +160,12 @@ pub(crate) fn check_contains_all_of<'collection, 'item, C, I, M>(
     }
 }
 
-pub(crate) fn check_contains_none_of<'collection, 'item, C, I, S>(
+pub(crate) fn check_contains_none_of<'item, C, I, S>(
     assert_that: &AssertThat<C>,
     actual_items: I,
     unexpected_items: Vec<&'item C::Item>,
 ) where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
     S: Set<&'item C::Item>,
@@ -195,12 +195,12 @@ pub(crate) fn check_contains_none_of<'collection, 'item, C, I, S>(
     }
 }
 
-pub(crate) fn check_contains_exactly_in_any_order<'collection, 'item, C, I, M>(
+pub(crate) fn check_contains_exactly_in_any_order<'item, C, I, M>(
     assert_that: &AssertThat<C>,
     actual_items: I,
     expected_items: &'item [&C::Item],
 ) where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + 'item,
     I: Iterator<Item = &'item C::Item>,
     M: Multiset<&'item C::Item>,
@@ -228,9 +228,9 @@ pub(crate) fn check_contains_exactly_in_any_order<'collection, 'item, C, I, M>(
     }
 }
 
-impl<'collection, C> CollectionPartialEqAssertions<'collection, C> for AssertThat<C>
+impl<C> CollectionPartialEqAssertions<C> for AssertThat<C>
 where
-    C: Collection<'collection>,
+    C: Collection,
     C::Item: Debug + PartialEq,
 {
     fn contains<E: Borrow<C::Item>>(self, item: E) -> Self {
@@ -317,9 +317,9 @@ where
 ///     .starts_with(&[1, 2])
 ///     .does_not_end_with(&[2, 3]);
 /// ```
-pub trait OrderedCollectionPartialEqAssertions<'collection, C>
+pub trait OrderedCollectionPartialEqAssertions<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
 {
     /// Asserts that there is a contiguous subsequence in the tested collection that equals the
     /// given `subsequence` in order according to [PartialEq].
@@ -378,52 +378,49 @@ where
         I: IntoIterator<Item = E>;
 }
 
-fn find_contiguous_subsequence<'collection, C>(
+fn find_contiguous_subsequence<C>(
     collection: &C,
     subsequence: &[&C::Item],
 ) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
 {
     find_contiguous_subsequence_by(collection, subsequence, PartialEq::eq)
 }
 
-fn find_subsequence<'collection, C>(
-    collection: &C,
-    subsequence: &[&C::Item],
-) -> Option<Vec<Range<usize>>>
+fn find_subsequence<C>(collection: &C, subsequence: &[&C::Item]) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
 {
     find_subsequence_by(collection, subsequence, PartialEq::eq)
 }
 
-fn find_prefix<'collection, C>(collection: &C, prefix: &[&C::Item]) -> Option<Vec<Range<usize>>>
+fn find_prefix<C>(collection: &C, prefix: &[&C::Item]) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
 {
     find_prefix_by(collection, prefix, PartialEq::eq)
 }
 
-fn find_suffix<'collection, C>(collection: &C, suffix: &[&C::Item]) -> Option<Vec<Range<usize>>>
+fn find_suffix<C>(collection: &C, suffix: &[&C::Item]) -> Option<Vec<Range<usize>>>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
 {
     find_suffix_by(collection, suffix, PartialEq::eq)
 }
 
-fn assert_contains_subsequence_kind<'collection, C, E, I, F>(
+fn assert_contains_subsequence_kind<C, E, I, F>(
     assert_that: AssertThat<C>,
     subsequence_of_kind: I,
     find_subsequence_of_kind: F,
     expected_it_prefix: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
@@ -452,14 +449,14 @@ where
     assert_that
 }
 
-fn assert_does_not_contain_subsequence_kind<'collection, C, E, I, F>(
+fn assert_does_not_contain_subsequence_kind<C, E, I, F>(
     assert_that: AssertThat<C>,
     subsequence_of_kind: I,
     find_subsequence_of_kind: F,
     expected_it_prefix: &str,
 ) -> AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
     E: Borrow<C::Item>,
     I: IntoIterator<Item = E>,
@@ -491,9 +488,9 @@ where
     assert_that
 }
 
-impl<'collection, C> OrderedCollectionPartialEqAssertions<'collection, C> for AssertThat<C>
+impl<C> OrderedCollectionPartialEqAssertions<C> for AssertThat<C>
 where
-    C: OrderedCollection<'collection>,
+    C: OrderedCollection,
     C::Item: Debug + PartialEq,
 {
     fn contains_contiguous_subsequence<E, I>(self, subsequence: I) -> Self
