@@ -1,19 +1,20 @@
 [package]
 name = "kernal"
 version = "0.4.0"
-authors = [ "Florian Weinacker <florian1345@gmx.de>" ]
+authors = ["Florian Weinacker <florian1345@gmx.de>"]
 edition = "2021"
 description = "A fluent assertion framework for Rust."
 documentation = "https://docs.rs/kernal/latest/kernal/"
 readme = "README.md"
 repository = "https://github.com/florian1345/kernal"
 license = "MIT OR Apache-2.0"
-keywords = [ "assert", "assertion", "fluent", "test" ]
-categories = [ "development-tools::testing" ]
+keywords = ["assert", "assertion", "fluent", "test"]
+categories = ["development-tools::testing"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = { version = "1.0.149", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
@@ -22,6 +23,9 @@ rstest = "0.24.0"
 rstest_reuse = "0.7.0"
 symlink = "0.1.0"
 tempfile = "3.16.0"
+
+[features]
+json = ["dep:serde_json"]
 
 [profile.bench]
 opt-level = 3

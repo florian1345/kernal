@@ -116,6 +116,8 @@ pub mod character;
 pub mod collections;
 pub mod error;
 pub mod fast_prelude;
+#[cfg(feature = "json")]
+pub mod json;
 pub mod lock;
 pub mod maps;
 pub mod num;
