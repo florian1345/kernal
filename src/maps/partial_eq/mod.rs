@@ -9,8 +9,8 @@ use crate::collections::partial_eq::{
     compute_missing_and_superfluous,
     format_error_for_missing_and_superfluous,
 };
-use crate::maps::Map;
 use crate::maps::debug::{HighlightedMapDebug, MapDebug, MapEntriesDebug};
+use crate::maps::{Map, extract_single_item};
 use crate::util::multiset::Multiset;
 use crate::util::multiset::vec::VecMultiset;
 use crate::util::{borrow_all, borrow_all_pairs};
@@ -121,6 +121,14 @@ pub trait MapPartialEqAssertions<M: Map> {
         K: Borrow<M::Key>,
         V: Borrow<M::Value>,
         I: IntoIterator<Item = (K, V)>;
+
+    /// Asserts that the tested map contains exactly one entry which is assigned to the given `key`
+    /// and has a value equal to the given expected `value` according to [PartialEq].
+    fn is_single_entry<K: Borrow<M::Key>, V: Borrow<M::Value>>(self, key: K, value: V) -> Self;
+
+    /// Asserts that the tested map contains exactly one entry which has a value equal to the given
+    /// expected `value` according to [PartialEq].
+    fn is_single_value<V: Borrow<M::Value>>(self, value: V) -> Self;
 }
 
 fn get_key<'reference, M>(map: &'reference M, value: &M::Value) -> Option<&'reference M::Key>
@@ -519,6 +527,43 @@ where
                 .but_it(format!(
                     "was <{:?}>, which additionally contains the key <{:?}>",
                     highlighted_map_debug, superfluous_key
+                ))
+                .fail()
+        }
+
+        self
+    }
+
+    fn is_single_entry<K: Borrow<M::Key>, V: Borrow<M::Value>>(self, key: K, value: V) -> Self {
+        let key = key.borrow();
+        let value = value.borrow();
+        let expected_it = || format!("to contain exactly one entry <{:?}> => <{:?}>", key, value);
+        let (single_key, single_value) = extract_single_item(&self, M::entries, expected_it());
+
+        if !M::are_keys_equal(single_key, key) || single_value != value {
+            Failure::new(&self)
+                .expected_it(expected_it())
+                .but_it(format!(
+                    "contained single entry <{:?}> => <{:?}>",
+                    single_key, single_value,
+                ))
+                .fail()
+        }
+
+        self
+    }
+
+    fn is_single_value<V: Borrow<M::Value>>(self, value: V) -> Self {
+        let value = value.borrow();
+        let expected_it = || format!("to contain exactly one entry with value <{:?}>", value);
+        let single_value = extract_single_item(&self, M::values, expected_it());
+
+        if single_value != value {
+            Failure::new(&self)
+                .expected_it(expected_it())
+                .but_it(format!(
+                    "contained single entry with value <{:?}>",
+                    single_value,
                 ))
                 .fail()
         }
@@ -1075,5 +1120,71 @@ mod tests {
             expected it "to contain exactly the entries \
                 <[ \"apple\" => 1, \"apple\" => 1, \"banana\" => 2, \"apple\" => 1 ]>"
             but it "was <[ \"apple\" => 1 ]>, which is missing the key <\"banana\">");
+    }
+
+    #[test]
+    fn is_single_entry_passes() {
+        assert_that!(HashMap::from([("apple", 1)])).is_single_entry("apple", 1);
+    }
+
+    #[test]
+    fn is_single_entry_fails_for_empty_map() {
+        assert_fails!((HashMap::<u32, u32>::new()).is_single_entry(1, 2),
+            expected it "to contain exactly one entry <1> => <2>"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_entry_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).is_single_entry("apple", 1),
+            expected it "to contain exactly one entry <\"apple\"> => <1>"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_entry_fails_for_different_key() {
+        assert_fails!((HashMap::from([("apple", 1)])).is_single_entry("banana", 1),
+            expected it "to contain exactly one entry <\"banana\"> => <1>"
+            but it "contained single entry <\"apple\"> => <1>");
+    }
+
+    #[test]
+    fn is_single_entry_fails_for_different_value() {
+        assert_fails!((HashMap::from([("apple", 1)])).is_single_entry("apple", 2),
+            expected it "to contain exactly one entry <\"apple\"> => <2>"
+            but it "contained single entry <\"apple\"> => <1>");
+    }
+
+    #[test]
+    fn is_single_entry_fails_for_different_key_and_value() {
+        assert_fails!((HashMap::from([("apple", 1)])).is_single_entry("banana", 2),
+            expected it "to contain exactly one entry <\"banana\"> => <2>"
+            but it "contained single entry <\"apple\"> => <1>");
+    }
+
+    #[test]
+    fn is_single_value_passes() {
+        assert_that!(HashMap::from([("apple", 1)])).is_single_value(1);
+    }
+
+    #[test]
+    fn is_single_value_fails_for_empty_map() {
+        assert_fails!((HashMap::<u32, u32>::new()).is_single_value(1),
+            expected it "to contain exactly one entry with value <1>"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_value_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).is_single_value(1),
+            expected it "to contain exactly one entry with value <1>"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_value_fails_for_different_value() {
+        assert_fails!((BTreeMap::from([("apple", 1)])).is_single_value(2),
+            expected it "to contain exactly one entry with value <2>"
+            but it "contained single entry with value <1>");
     }
 }

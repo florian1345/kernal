@@ -16,7 +16,7 @@ use std::slice::Iter as SliceIter;
 
 use crate::collections::ordered::OrderedCollection;
 use crate::util::borrow_all;
-use crate::{AssertThat, Failure};
+use crate::{AssertThat, AssertThatData, Failure};
 
 pub mod abs_diff;
 pub mod ord;
@@ -353,6 +353,20 @@ where
     /// Asserts that the collection contains no elements for which the given `predicate` returns
     /// `true`. In particular, an empty collection always satisfies this assertion.
     fn does_not_contain_elements_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self;
+
+    // TODO find a solution that does not require a reference here
+
+    /// Asserts that the tested collection has exactly one element and returns an [AssertThat] for
+    /// further assertions on a reference to that element.
+    ///
+    /// Due to restrictions in the current type setup, this method returns values referencing the
+    /// collection. Therefore, it must be executed on a reference of the current [AssertThat]. It is
+    /// still intended and recommended to be used in a call chain as all other assertions.
+    fn to_single_element(&self) -> AssertThat<&C::Item>;
+
+    /// Asserts that the tested collection contains exactly one element and that element satisfies
+    /// the given `predicate`.
+    fn is_single_element_matching<F: FnMut(&C::Item) -> bool>(self, predicate: F) -> Self;
 }
 
 fn assert_length_predicate<C, F>(
@@ -470,6 +484,41 @@ where
     }
 
     assert_that
+}
+
+fn extract_single_element<C>(
+    assert_that: &AssertThat<C>,
+    expected_it: impl Into<String>,
+) -> &C::Item
+where
+    C: Collection,
+    C::Item: Debug,
+{
+    let mut iter = assert_that.data().iterator();
+    let Some(first) = iter.next()
+    else {
+        Failure::new(assert_that)
+            .expected_it(expected_it)
+            .but_it("was empty")
+            .fail()
+    };
+
+    let len = assert_that.data().len();
+
+    if len > 1 {
+        Failure::new(assert_that)
+            .expected_it(expected_it)
+            .but_it(format!(
+                "was <{:?}>, which has length <{}>",
+                CollectionDebug {
+                    collection: assert_that.data()
+                },
+                len
+            ))
+            .fail();
+    }
+
+    first
 }
 
 impl<C> CollectionAssertions<C> for AssertThat<C>
@@ -591,6 +640,30 @@ where
             |item| !predicate(item),
             "not to contain elements matching predicate",
         )
+    }
+
+    fn to_single_element(&self) -> AssertThat<&C::Item> {
+        AssertThat {
+            data: extract_single_element(self, "to contain exactly one element"),
+            expression: format!("single element of <{}>", self.expression),
+        }
+    }
+
+    fn is_single_element_matching<F: FnMut(&C::Item) -> bool>(self, mut predicate: F) -> Self {
+        let expected_it = "to contain exactly one element, which matches the given predicate";
+        let single_element = extract_single_element(&self, expected_it);
+
+        if !predicate(single_element) {
+            Failure::new(&self)
+                .expected_it(expected_it)
+                .but_it(format!(
+                    "contained single element <{:?}>, which does not match the predicate",
+                    single_element
+                ))
+                .fail()
+        }
+
+        self
     }
 }
 
@@ -729,7 +802,8 @@ mod tests {
     use std::slice::Iter;
 
     use super::*;
-    use crate::{assert_fails, assert_that};
+    use crate::assert_fails;
+    use crate::prelude::*;
 
     struct MockCollection(Vec<u32>);
 
@@ -1085,5 +1159,56 @@ mod tests {
         assert_fails!((&["", "a"]).does_not_contain_elements_matching(|&s| s.is_empty()),
             expected it "not to contain elements matching predicate"
             but it "was <[ [\"\"], \"a\" ]>");
+    }
+
+    #[test]
+    fn to_single_element_passes() {
+        let vec = vec![1];
+        let assert = assert_that!(vec);
+        let single_element_assert = assert.to_single_element();
+
+        assert_that!(single_element_assert.data).is_equal_to(&1);
+        assert_that!(single_element_assert.expression.as_str())
+            .is_equal_to("single element of <vec>");
+    }
+
+    #[test]
+    fn to_single_element_fails_for_empty_collection() {
+        assert_fails!((BTreeSet::<String>::new()).to_single_element(),
+            expected it "to contain exactly one element"
+            but it "was empty");
+    }
+
+    #[test]
+    fn to_single_element_fails_for_multiple_elements() {
+        assert_fails!((vec![1, 2]).to_single_element(),
+            expected it "to contain exactly one element"
+            but it "was <[ 1, 2 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_element_matching_passes() {
+        assert_that!(&["hello"]).is_single_element_matching(|s| s.len() == 5);
+    }
+
+    #[test]
+    fn is_single_element_matching_fails_for_empty_collection() {
+        assert_fails!((VecDeque::<String>::new()).is_single_element_matching(|s| s.len() == 5),
+            expected it "to contain exactly one element, which matches the given predicate"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_element_matching_fails_for_multiple_elements() {
+        assert_fails!((vec![1, 2]).is_single_element_matching(|i| i % 2 == 0),
+            expected it "to contain exactly one element, which matches the given predicate"
+            but it "was <[ 1, 2 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_element_matching_fails_for_single_element_not_matching_predicate() {
+        assert_fails!((vec![3]).is_single_element_matching(|i| i % 2 == 0),
+            expected it "to contain exactly one element, which matches the given predicate"
+            but it "contained single element <3>, which does not match the predicate");
     }
 }
