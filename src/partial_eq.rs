@@ -88,7 +88,7 @@ impl<T: Debug + PartialEq> PartialEqAssertions<T> for AssertThat<T> {
         let counter_example_index = unexpected_vec
             .iter()
             .enumerate()
-            .find(|(_, &unexpected)| &self.data == unexpected)
+            .find(|(_, unexpected)| &self.data == **unexpected)
             .map(|(index, _)| index);
 
         if let Some(counter_example_index) = counter_example_index {

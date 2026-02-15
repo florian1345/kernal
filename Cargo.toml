@@ -2,7 +2,7 @@
 name = "kernal"
 version = "0.4.0"
 authors = ["Florian Weinacker <florian1345@gmx.de>"]
-edition = "2021"
+edition = "2024"
 description = "A fluent assertion framework for Rust."
 documentation = "https://docs.rs/kernal/latest/kernal/"
 readme = "README.md"

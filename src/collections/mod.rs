@@ -217,14 +217,14 @@ fn open_and_close_section_before_item_if_applicable(
     next_highlighted_section: Option<&Range<usize>>,
     current_index: usize,
 ) -> Result<bool, fmt::Error> {
-    if let Some(next_highlighted_section) = next_highlighted_section {
-        if next_highlighted_section.start == current_index {
-            write!(f, "[")?;
+    if let Some(next_highlighted_section) = next_highlighted_section
+        && next_highlighted_section.start == current_index
+    {
+        write!(f, "[")?;
 
-            if next_highlighted_section.end == current_index {
-                write!(f, "] ")?;
-                return Ok(true);
-            }
+        if next_highlighted_section.end == current_index {
+            write!(f, "] ")?;
+            return Ok(true);
         }
     }
 
