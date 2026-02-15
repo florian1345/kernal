@@ -21,7 +21,7 @@ use std::slice::Iter as SliceIter;
 use crate::collections::{Collection, CollectionDebug};
 use crate::maps::debug::{HighlightedMapDebug, MapDebug};
 use crate::util::borrow_all;
-use crate::{AssertThat, Failure};
+use crate::{AssertThat, AssertThatData, Failure};
 
 pub mod partial_eq;
 
@@ -384,10 +384,49 @@ pub trait MapAssertions<M: Map> {
     /// Converts the tested map into a [Collection] that contains _references_ to its entries and
     /// allows assertions on it.
     ///
-    /// Due to restrictions in the current type setup, this method requires a lifetime to be
-    /// associated with the returned entries. It is still intended and recommended to be used in a
-    /// call chain as all other assertions.
+    /// Due to restrictions in the current type setup, this method returns values referencing the
+    /// map. Therefore, it must be executed on a reference of the current [AssertThat]. It is still
+    /// intended and recommended to be used in a call chain as all other assertions.
     fn to_entries(&self) -> AssertThat<MapEntries<'_, M>>;
+
+    /// Asserts that the tested map has exactly one entry and returns an [AssertThat] for further
+    /// assertions on a reference to that entry.
+    ///
+    /// Due to restrictions in the current type setup, this method returns values referencing the
+    /// map. Therefore, it must be executed on a reference of the current [AssertThat]. It is still
+    /// intended and recommended to be used in a call chain as all other assertions.
+    fn to_single_entry(&self) -> AssertThat<(&M::Key, &M::Value)>;
+
+    /// Asserts that the tested map has exactly one entry and returns an [AssertThat] for further
+    /// assertions on a reference to its key.
+    ///
+    /// Due to restrictions in the current type setup, this method returns values referencing the
+    /// map. Therefore, it must be executed on a reference of the current [AssertThat]. It is still
+    /// intended and recommended to be used in a call chain as all other assertions.
+    fn to_single_key(&self) -> AssertThat<&M::Key>;
+
+    /// Asserts that the tested map has exactly one entry and returns an [AssertThat] for further
+    /// assertions on a reference to its value.
+    ///
+    /// Due to restrictions in the current type setup, this method returns values referencing the
+    /// map. Therefore, it must be executed on a reference of the current [AssertThat]. It is still
+    /// intended and recommended to be used in a call chain as all other assertions.
+    fn to_single_value(&self) -> AssertThat<&M::Value>;
+
+    /// Asserts that the tested map contains exactly one entry and that entry satisfies the given
+    /// `predicate`.
+    fn is_single_entry_matching<F: FnMut(&M::Key, &M::Value) -> bool>(self, predicate: F) -> Self;
+
+    /// Asserts that the tested map contains exactly one entry and the key of that entry satisfies
+    /// the given `predicate`.
+    fn is_single_key_matching<F: FnMut(&M::Key) -> bool>(self, predicate: F) -> Self;
+
+    /// Asserts that the tested map contains exactly one entry and the value of that entry satisfies
+    /// the given `predicate`.
+    fn is_single_value_matching<F: FnMut(&M::Value) -> bool>(self, predicate: F) -> Self;
+
+    /// Asserts that the tested map contains exactly one entry which is assigned to the given `key`.
+    fn is_single_key<K: Borrow<M::Key>>(self, key: K) -> Self;
 }
 
 fn assert_length_predicate<M, F>(
@@ -416,6 +455,45 @@ where
     }
 
     assert_that
+}
+
+fn extract_single_item<'assert, M, T, I, F>(
+    assert_that: &'assert AssertThat<M>,
+    get_iterator: F,
+    expected_it: impl Into<String>,
+) -> T
+where
+    M: Map + 'assert,
+    M::Key: Debug,
+    M::Value: Debug,
+    I: Iterator<Item = T>,
+    F: Fn(&'assert M) -> I,
+{
+    let mut iter = get_iterator(assert_that.data());
+    let Some(first_entry) = iter.next()
+    else {
+        Failure::new(assert_that)
+            .expected_it(expected_it)
+            .but_it("was empty")
+            .fail()
+    };
+
+    let len = assert_that.data().len();
+
+    if len > 1 {
+        Failure::new(assert_that)
+            .expected_it(expected_it)
+            .but_it(format!(
+                "was <{:?}>, which has length <{}>",
+                MapDebug {
+                    map: assert_that.data()
+                },
+                len
+            ))
+            .fail();
+    }
+
+    first_entry
 }
 
 impl<M> MapAssertions<M> for AssertThat<M>
@@ -654,6 +732,99 @@ where
             },
             expression: format!("entries of <{}>", self.expression),
         }
+    }
+
+    fn to_single_entry(&self) -> AssertThat<(&M::Key, &M::Value)> {
+        AssertThat {
+            data: extract_single_item(self, M::entries, "to contain exactly one entry"),
+            expression: format!("single entry of <{}>", self.expression),
+        }
+    }
+
+    fn to_single_key(&self) -> AssertThat<&M::Key> {
+        AssertThat {
+            data: extract_single_item(self, M::keys, "to contain exactly one entry"),
+            expression: format!("single key of <{}>", self.expression),
+        }
+    }
+
+    fn to_single_value(&self) -> AssertThat<&M::Value> {
+        AssertThat {
+            data: extract_single_item(self, M::values, "to contain exactly one entry"),
+            expression: format!("single value of <{}>", self.expression),
+        }
+    }
+
+    fn is_single_entry_matching<F: FnMut(&M::Key, &M::Value) -> bool>(
+        self,
+        mut predicate: F,
+    ) -> Self {
+        let expected_it = "to contain exactly one entry, which matches the given predicate";
+        let (single_key, single_value) = extract_single_item(&self, M::entries, expected_it);
+
+        if !predicate(single_key, single_value) {
+            Failure::new(&self)
+                .expected_it(expected_it)
+                .but_it(format!(
+                    "contained single entry <{:?}> => <{:?}>, which does not match the predicate",
+                    single_key, single_value,
+                ))
+                .fail()
+        }
+
+        self
+    }
+
+    fn is_single_key_matching<F: FnMut(&M::Key) -> bool>(self, mut predicate: F) -> Self {
+        let expected_it = "to contain exactly one entry, whose key matches the given predicate";
+        let single_key = extract_single_item(&self, M::keys, expected_it);
+
+        if !predicate(single_key) {
+            Failure::new(&self)
+                .expected_it(expected_it)
+                .but_it(format!(
+                    "contained single entry with key <{:?}>, which does not match the predicate",
+                    single_key,
+                ))
+                .fail()
+        }
+
+        self
+    }
+
+    fn is_single_value_matching<F: FnMut(&M::Value) -> bool>(self, mut predicate: F) -> Self {
+        let expected_it = "to contain exactly one entry, whose value matches the given predicate";
+        let single_value = extract_single_item(&self, M::values, expected_it);
+
+        if !predicate(single_value) {
+            Failure::new(&self)
+                .expected_it(expected_it)
+                .but_it(format!(
+                    "contained single entry with value <{:?}>, which does not match the predicate",
+                    single_value,
+                ))
+                .fail()
+        }
+
+        self
+    }
+
+    fn is_single_key<K: Borrow<M::Key>>(self, key: K) -> Self {
+        let key = key.borrow();
+        let expected_it = || format!("to contain exactly one entry with key <{:?}>", key);
+        let single_key = extract_single_item(&self, M::keys, expected_it());
+
+        if !M::are_keys_equal(single_key, key) {
+            Failure::new(&self)
+                .expected_it(expected_it())
+                .but_it(format!(
+                    "contained single entry with key <{:?}>",
+                    single_key
+                ))
+                .fail()
+        }
+
+        self
     }
 }
 
@@ -1168,5 +1339,192 @@ mod tests {
         let expression = assert_that!(&mut map).to_entries().expression;
 
         assert_that!(expression.as_str()).is_equal_to("entries of <&mut map>");
+    }
+
+    #[test]
+    fn to_single_entry_passes() {
+        let map = HashMap::from_iter([("hello", "world")]);
+        let assert = assert_that!(map);
+
+        let single_entry_assert = assert.to_single_entry();
+
+        assert_that!(single_entry_assert.data).is_equal_to((&"hello", &"world"));
+        assert_that!(single_entry_assert.expression.as_str()).is_equal_to("single entry of <map>");
+    }
+
+    #[test]
+    fn to_single_entry_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).to_single_entry(),
+            expected it "to contain exactly one entry"
+            but it "was empty");
+    }
+
+    #[test]
+    fn to_single_entry_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).to_single_entry(),
+            expected it "to contain exactly one entry"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn to_single_key_passes() {
+        let map = HashMap::from_iter([("hello", "world")]);
+        let assert = assert_that!(map);
+
+        let single_entry_assert = assert.to_single_key();
+
+        assert_that!(single_entry_assert.data).is_equal_to(&"hello");
+        assert_that!(single_entry_assert.expression.as_str()).is_equal_to("single key of <map>");
+    }
+
+    #[test]
+    fn to_single_key_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).to_single_key(),
+            expected it "to contain exactly one entry"
+            but it "was empty");
+    }
+
+    #[test]
+    fn to_single_key_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).to_single_key(),
+            expected it "to contain exactly one entry"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn to_single_value_passes() {
+        let map = HashMap::from_iter([("hello", "world")]);
+        let assert = assert_that!(map);
+
+        let single_entry_assert = assert.to_single_value();
+
+        assert_that!(single_entry_assert.data).is_equal_to(&"world");
+        assert_that!(single_entry_assert.expression.as_str()).is_equal_to("single value of <map>");
+    }
+
+    #[test]
+    fn to_single_value_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).to_single_value(),
+            expected it "to contain exactly one entry"
+            but it "was empty");
+    }
+
+    #[test]
+    fn to_single_value_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).to_single_value(),
+            expected it "to contain exactly one entry"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_entry_matching_passes() {
+        assert_that!(HashMap::from_iter([("key", "value")]))
+            .is_single_entry_matching(|key, value| key.len() + value.len() == 8);
+    }
+
+    #[test]
+    fn is_single_entry_matching_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).is_single_entry_matching(|_, _| true),
+            expected it "to contain exactly one entry, which matches the given predicate"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_entry_matching_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).is_single_entry_matching(|_, _| true),
+            expected it "to contain exactly one entry, which matches the given predicate"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_entry_matching_fails_for_single_entry_not_matching_predicate() {
+        assert_fails!((HashMap::from_iter([("key", "value")]))
+                .is_single_entry_matching(|key, value| key.len() + value.len() == 7),
+            expected it "to contain exactly one entry, which matches the given predicate"
+            but it "contained single entry <\"key\"> => <\"value\">, which does not match the \
+                predicate");
+    }
+
+    #[test]
+    fn is_single_key_matching_passes() {
+        assert_that!(HashMap::from_iter([("key", "value")]))
+            .is_single_key_matching(|key| key.len() == 3);
+    }
+
+    #[test]
+    fn is_single_key_matching_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).is_single_key_matching(|_| true),
+            expected it "to contain exactly one entry, whose key matches the given predicate"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_key_matching_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).is_single_key_matching(|_| true),
+            expected it "to contain exactly one entry, whose key matches the given predicate"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_key_matching_fails_for_single_entry_not_matching_predicate() {
+        assert_fails!((HashMap::from_iter([("key", "value")]))
+                .is_single_key_matching(|key| key.len() == 2),
+            expected it "to contain exactly one entry, whose key matches the given predicate"
+            but it "contained single entry with key <\"key\">, which does not match the predicate");
+    }
+
+    #[test]
+    fn is_single_value_matching_passes() {
+        assert_that!(HashMap::from_iter([("key", "value")]))
+            .is_single_value_matching(|value| value.len() == 5);
+    }
+
+    #[test]
+    fn is_single_value_matching_fails_for_empty_map() {
+        assert_fails!((HashMap::<String, String>::new()).is_single_value_matching(|_| true),
+            expected it "to contain exactly one entry, whose value matches the given predicate"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_value_matching_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from_iter([(1, 2), (3, 4)])).is_single_value_matching(|_| true),
+            expected it "to contain exactly one entry, whose value matches the given predicate"
+            but it "was <[ 1 => 2, 3 => 4 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_value_matching_fails_for_single_entry_not_matching_predicate() {
+        assert_fails!((HashMap::from_iter([("key", "value")]))
+                .is_single_value_matching(|value| value.len() == 4),
+            expected it "to contain exactly one entry, whose value matches the given predicate"
+            but it "contained single entry with value <\"value\">, which does not match the \
+                predicate");
+    }
+
+    #[test]
+    fn is_single_key_passes() {
+        assert_that!(HashMap::from([("apple", 1)])).is_single_key("apple");
+    }
+
+    #[test]
+    fn is_single_key_fails_for_empty_map() {
+        assert_fails!((HashMap::<u32, u32>::new()).is_single_key(1),
+            expected it "to contain exactly one entry with key <1>"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_key_fails_for_multiple_entries() {
+        assert_fails!((BTreeMap::from([("apple", 1), ("banana", 2)])).is_single_key("apple"),
+            expected it "to contain exactly one entry with key <\"apple\">"
+            but it "was <[ \"apple\" => 1, \"banana\" => 2 ]>, which has length <2>");
+    }
+
+    #[test]
+    fn is_single_key_fails_for_different_key() {
+        assert_fails!((BTreeMap::from([("apple", 1)])).is_single_key("banana"),
+            expected it "to contain exactly one entry with key <\"banana\">"
+            but it "contained single entry with key <\"apple\">");
     }
 }

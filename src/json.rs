@@ -605,7 +605,7 @@ mod tests {
     fn invalid_jsons(#[case] json: impl AsJson + UnwindSafe) {}
 
     #[apply(valid_jsons)]
-    fn is_valid_json_success(
+    fn is_valid_json_passes(
         #[case] json: impl AsJson + UnwindSafe,
         #[case] _pretty_representation: &str,
     ) {
@@ -618,7 +618,7 @@ mod tests {
     }
 
     #[apply(invalid_jsons)]
-    fn is_not_valid_json_success(#[case] json: impl AsJson + UnwindSafe) {
+    fn is_not_valid_json_passes(#[case] json: impl AsJson + UnwindSafe) {
         assert_that!(json).is_not_valid_json();
     }
 
@@ -768,7 +768,7 @@ mod tests {
     }
 
     #[apply(equivalent_jsons)]
-    fn is_equivalent_to_json_success(
+    fn is_equivalent_to_json_passes(
         #[case] actual: impl AsJson + UnwindSafe,
         #[case] expected: impl AsJson + UnwindSafe,
         #[case] _pretty_representation: &str,
@@ -889,7 +889,7 @@ mod tests {
     }
 
     #[apply(equivalent_jsons)]
-    fn is_subset_of_json_success_for_equivalent_jsons(
+    fn is_subset_of_json_passes_for_equivalent_jsons(
         #[case] actual: impl AsJson + UnwindSafe,
         #[case] expected: impl AsJson + UnwindSafe,
         #[case] _pretty_representation: &str,
@@ -898,7 +898,7 @@ mod tests {
     }
 
     #[apply(proper_subset_jsons)]
-    fn is_subset_of_json_success_for_proper_subsets(
+    fn is_subset_of_json_passes_for_proper_subsets(
         #[case] subset: impl AsJson + UnwindSafe,
         #[case] superset: impl AsJson + UnwindSafe,
         #[case] _missing_paths_and_values: impl IntoIterator<Item = (&'static str, &'static str)>,
@@ -1009,7 +1009,7 @@ mod tests {
     }
 
     #[apply(equivalent_jsons)]
-    fn is_superset_of_json_success_for_equivalent_jsons(
+    fn is_superset_of_json_passes_for_equivalent_jsons(
         #[case] actual: impl AsJson + UnwindSafe,
         #[case] expected: impl AsJson + UnwindSafe,
         #[case] _pretty_representation: &str,
@@ -1018,7 +1018,7 @@ mod tests {
     }
 
     #[apply(proper_subset_jsons)]
-    fn is_superset_of_json_success_for_proper_supersets(
+    fn is_superset_of_json_passes_for_proper_supersets(
         #[case] subset: impl AsJson + UnwindSafe,
         #[case] superset: impl AsJson + UnwindSafe,
         #[case] _missing_paths_and_values: impl IntoIterator<Item = (&'static str, &'static str)>,

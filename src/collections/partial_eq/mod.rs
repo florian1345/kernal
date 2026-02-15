@@ -13,6 +13,7 @@ use crate::collections::{
     HighlightedCollectionDebug,
     assert_all_match_predicate,
     assert_contains_exactly_in_given_order_by,
+    extract_single_element,
     find_contiguous_subsequence_by,
     find_prefix_by,
     find_subsequence_by,
@@ -84,6 +85,10 @@ where
     where
         E: Borrow<C::Item>,
         I: IntoIterator<Item = E>;
+
+    /// Asserts that the tested collection contains exactly one element that is equal to the given
+    /// `item` according to [PartialEq].
+    fn is_single_element<E: Borrow<C::Item>>(self, item: E) -> Self;
 }
 
 pub(crate) fn compute_missing_and_superfluous<'item, T, M, I>(
@@ -297,6 +302,26 @@ where
             self.data.iterator(),
             &expected_items,
         );
+
+        self
+    }
+
+    fn is_single_element<E: Borrow<C::Item>>(self, item: E) -> Self {
+        let expected_item = item.borrow();
+        let expected_it = || {
+            format!(
+                "to contain exactly one element equal to <{:?}>",
+                expected_item
+            )
+        };
+        let single_element = extract_single_element(&self, expected_it());
+
+        if single_element != expected_item {
+            Failure::new(&self)
+                .expected_it(expected_it())
+                .but_it(format!("contained single element <{:?}>", single_element))
+                .fail();
+        }
 
         self
     }
@@ -598,6 +623,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::{BTreeSet, HashSet};
+
     use super::*;
     use crate::assert_fails;
     use crate::prelude::*;
@@ -1244,5 +1271,31 @@ mod tests {
         assert_fails!((&[0]).contains_exactly_in_given_order(&[]),
             expected it "to contain exactly in the given order <[ ]>"
             but it "was <[ [0] ]>");
+    }
+
+    #[test]
+    fn is_single_element_passes() {
+        assert_that!(HashSet::from_iter(["foo"])).is_single_element("foo");
+    }
+
+    #[test]
+    fn is_single_element_fails_for_empty_collection() {
+        assert_fails!((Vec::<usize>::new()).is_single_element(3),
+            expected it "to contain exactly one element equal to <3>"
+            but it "was empty");
+    }
+
+    #[test]
+    fn is_single_element_fails_for_multiple_elements() {
+        assert_fails!((&[1, 2, 3]).is_single_element(1),
+            expected it "to contain exactly one element equal to <1>"
+            but it "was <[ 1, 2, 3 ]>, which has length <3>");
+    }
+
+    #[test]
+    fn is_single_element_fails_for_non_different_element() {
+        assert_fails!((BTreeSet::from_iter([3])).is_single_element(4),
+            expected it "to contain exactly one element equal to <4>"
+            but it "contained single element <3>");
     }
 }
