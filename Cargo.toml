@@ -1,6 +1,6 @@
 [package]
 name = "kernal"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Florian Weinacker <florian1345@gmx.de>"]
 edition = "2024"
 description = "A fluent assertion framework for Rust."
@@ -34,3 +34,6 @@ lto = true
 [[bench]]
 name = "bench"
 harness = false
+
+[package.metadata.docs.rs]
+all-features = true

@@ -73,6 +73,11 @@ impl Vector2f32Assertions for AssertThat<Vector2f32> {
 }
 ```
 
+## Crate features
+
+* `json`: Enables assertions on types that can be parsed as JSONs as well as JSON values from
+  the [serde_json](https://docs.rs/serde_json/latest/serde_json/) crate.
+
 ## Links
 
 * [Crate](https://crates.io/crates/kernal)
