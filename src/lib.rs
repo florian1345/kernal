@@ -85,6 +85,12 @@
 //!     .panics();
 //! ```
 //!
+//! # Create features
+//!
+//! * `json`: Enables assertions on types that can be parsed as JSONs as well as JSON values from
+//!   the [serde_json](https://docs.rs/serde_json/latest/serde_json/) crate. See the [json] module
+//!   for more information.
+//!
 //! # Notes on performance
 //!
 //! Should you write assertions on large amounts of data, the standard assertions may become a
