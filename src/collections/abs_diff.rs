@@ -34,7 +34,7 @@ where
     let violating_index = items
         .iter()
         .enumerate()
-        .find(|(_, &item)| !predicate(item))
+        .find(|(_, item)| !predicate(item))
         .map(|(index, _)| index);
 
     violating_index.map(|violating_index| {
